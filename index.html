@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>solarich 着せ替えシートシュミレーション</title>
+<title>solarich 着せ替えシートシミュレーション</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
@@ -165,31 +165,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 .hint{font-size:.66rem;color:var(--ink-faint);margin-top:8px;line-height:1.6}
 .footer{text-align:center;font-size:.7rem;color:var(--ink-faint);padding:8px 20px 48px}
 
-/* ---------- 工事中 ---------- */
-.wip{position:relative;border:1px dashed rgba(0,0,0,.18);border-radius:10px;padding:12px 12px 10px;background:#FAFAF8}
-.wip>*:not(.wip-tag){opacity:.42;pointer-events:none;user-select:none}
-.wip-tag{position:absolute;right:10px;top:-9px;font-size:.6rem;font-weight:900;letter-spacing:.08em;color:var(--white);background:var(--ink-faint);padding:2px 9px;border-radius:100px}
-
-/* ---------- 柄の生成 ---------- */
-#genPrompt{font-size:.78rem;border:1px solid var(--line);border-radius:9px;padding:9px 11px;width:100%;background:var(--white);color:var(--ink);resize:vertical;line-height:1.6;font-family:inherit}
-#genPrompt:focus{outline:2px solid rgba(31,58,95,.25);outline-offset:-1px}
-.gen-row{display:flex;gap:7px;margin-top:7px;align-items:center}
-.chip-group{display:flex;gap:7px;margin-top:8px;align-items:flex-start}
-.chip-lbl{font-size:.62rem;font-weight:700;color:var(--ink-faint);flex:none;width:2.2em;padding-top:3px}
-.chips{display:flex;flex-wrap:wrap;gap:4px;flex:1}
-.chips button{font-size:.64rem;font-family:inherit;border:1px solid var(--line);background:var(--white);color:var(--ink-light);padding:2px 8px;border-radius:100px;cursor:pointer}
-.chips button:hover{background:var(--navy-light);color:var(--navy);border-color:transparent}
-.gen-status{font-size:.66rem;margin-top:7px;min-height:1.1em;color:var(--ink-faint);line-height:1.6}
-.gen-status.err{color:#C94C4C}
-.gen-status.ok{color:#3F8F5E}
-.gen-status.busy{color:var(--accent)}
-.gen-adv{margin-top:8px}
-.gen-adv summary{font-size:.66rem;color:var(--ink-faint);cursor:pointer;list-style:none}
-.gen-adv summary::-webkit-details-marker{display:none}
-.gen-adv summary::before{content:'▸ ';color:var(--navy)}
-.gen-adv[open] summary::before{content:'▾ '}
-.gen-adv input{margin-top:6px;font-size:.72rem}
-
 /* ================= 書き出し（A4横 PDF） ================= */
 #printRoot{display:none}
 @media print{
@@ -235,7 +210,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 
 <div class="topbar">
   <div class="topbar-main">
-    <div class="brand">solarich 着せ替えシートシュミレーション<small>色（RGB）と模様を本体に反映して比較する</small></div>
+    <div class="brand">solarich 着せ替えシートシミュレーション<small>色（RGB）と模様を本体に反映して比較する</small></div>
     <div class="topbar-actions">
       <button class="btn btn-sm" id="btnBase">ベース画像を差し替え</button>
       <button class="btn btn-sm" id="btnSaves">版：<b id="slotLabel">未保存</b> ▾</button>
@@ -269,7 +244,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 </div>
 
 <div class="hero">
-  <h1>solarich 着せ替えシートシュミレーション</h1>
+  <h1>solarich 着せ替えシートシミュレーション</h1>
   <p>枠をクリックすると詳細が開きます。色（RGB）または模様画像を指定し、「反映する」で本体に貼り付けた状態が表示されます。各案にはイメージ画像（設置シーンの写真）を並べて確認できます。</p>
   <div class="stats">
     <span><b id="statCat">0</b> カテゴリー</span>
@@ -286,7 +261,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 </div>
 
 <main class="main" id="catalogRoot"></main>
-<div class="footer">solarich 着せ替えシートシュミレーション｜社内レビュー用</div>
+<div class="footer">solarich 着せ替えシートシミュレーション｜社内レビュー用</div>
 
 <!-- ============ 書き出し用（画面では非表示 / 印刷時のみ） ============ -->
 <div id="printRoot"></div>
@@ -357,26 +332,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
           </div>
 
           <div id="dPatArea" style="display:none">
-            <div class="field wip">
-              <div class="wip-tag">工事中</div>
-              <div class="field-label">プロンプトから生成</div>
-              <textarea id="genPrompt" rows="2" placeholder="例：くすんだ青とベージュの細かいストライプ" disabled></textarea>
-              <div class="gen-row">
-                <button class="btn btn-sm btn-primary" id="btnGen" disabled>生成</button>
-                <button class="btn btn-sm" id="btnGenVar" disabled>別パターン</button>
-              </div>
-              <div class="gen-status" id="genStatus"></div>
-              <details class="gen-adv">
-                <summary>使えることば</summary>
-                <div class="chip-group"><span class="chip-lbl">柄</span><div class="chips" id="chipsType"></div></div>
-                <div class="chip-group"><span class="chip-lbl">色</span><div class="chips" id="chipsColor"></div></div>
-                <div class="chip-group"><span class="chip-lbl">調子</span><div class="chips" id="chipsTone"></div></div>
-                <div class="hint">クリックでプロンプトに追加されます。色は <code>#1F3A5F</code> のような指定も可。色を書かない場合は「単色（RGB）」で指定中の色を使います。</div>
-              </details>
-            </div>
-
             <div class="field">
-              <div class="field-label">画像から指定</div>
               <div class="mini-up" id="dPatUp">模様画像をドロップ / クリックして選択</div>
               <div class="pat-info" id="dPatInfo">
                 <img id="dPatThumb" alt=""><span class="m" id="dPatMeta"></span>
@@ -417,7 +373,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 </div>
 
 <script src="catalog.js"></script>
-<script src="pattern.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

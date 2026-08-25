@@ -37,7 +37,7 @@ for (const cat of CATALOG) {
       name: it.name || "",
       mode: "color",
       hex: "#EE7A20",
-      pattern: null, patternName: "", prompt: "",
+      pattern: null, patternName: "",
       fit: "cover", scale: 100, offX: 0, offY: 0, rot: 0,
       print: "white", printColor: "#F3BE18",
       applied: false,
@@ -340,9 +340,6 @@ function openDetail(id) {
   $("dPrintPicker").value = it.printColor;
   $("dPrintHex").value = it.printColor.toUpperCase();
 
-  $("genPrompt").value = it.prompt || "";
-  genStatus("");
-
   refreshPatInfo();
   refreshRoom();
   refreshApplyBtn();
@@ -493,81 +490,6 @@ $("dHex").addEventListener("input", e => {
   setColor(hexFromRGB());
 }));
 
-/* ---------------------------------------------------------
-   プロンプト（キーワード）から柄を生成
-   外部APIは使わず、pattern.js がブラウザ内で描く
-   --------------------------------------------------------- */
-function genStatus(msg, cls) {
-  const el = $("genStatus");
-  el.textContent = msg;
-  el.className = "gen-status" + (cls ? " " + cls : "");
-}
-
-async function generatePattern(nextVariant) {
-  const it = cur(); if (!it) return;
-  const prompt = $("genPrompt").value.trim();
-  if (!prompt) { genStatus("プロンプトを入力してください。", "err"); return; }
-
-  it.variant = nextVariant ? (it.variant || 0) + 1 : 0;
-
-  try {
-    const out = PATTERN.generate(prompt, it.hex, it.variant);
-    const img = new Image();
-    await new Promise((res, rej) => {
-      img.onload = res; img.onerror = rej;
-      img.src = out.canvas.toDataURL("image/png");
-    });
-
-    it.pattern = img;
-    it.patternKind = "gen";
-    it.patternBlob = null;
-    it.patternName = prompt.length > 28 ? prompt.slice(0, 28) + "…" : prompt;
-    it.prompt = prompt;
-    it.mode = "pattern";
-    setSeg("dMode", "mode", "pattern");
-    $("dColorArea").style.display = "none";
-    $("dPatArea").style.display = "";
-    refreshPatInfo(); repaintDetail(); refreshCard(it.id);
-
-    const cols = out.colors.slice(0, 3).join(" / ");
-    genStatus(`「${out.label}」で生成（${cols}）` +
-      (it.applied ? "" : "。「反映する」を押すと本体に反映されます"), "ok");
-  } catch (e) {
-    genStatus("生成できませんでした：" + e.message, "err");
-  }
-}
-$("btnGen").addEventListener("click", () => generatePattern(false));
-$("btnGenVar").addEventListener("click", () => generatePattern(true));
-$("genPrompt").addEventListener("input", e => { if (S.current) cur().prompt = e.target.value; });
-$("genPrompt").addEventListener("keydown", e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") generatePattern(false);
-});
-
-/* 使えることばのチップ */
-(function buildChips() {
-  const add = word => {
-    const t = $("genPrompt");
-    t.value = (t.value.trim() + " " + word).trim();
-    if (S.current) cur().prompt = t.value;
-    t.focus();
-  };
-  const fill = (elId, words) => {
-    const box = $(elId);
-    for (const w of words) {
-      const b = document.createElement("button");
-      b.type = "button"; b.textContent = w;
-      b.addEventListener("click", () => add(w));
-      box.appendChild(b);
-    }
-  };
-  fill("chipsType", PATTERN.TYPES.map(t => t[1][0]));
-  fill("chipsColor", ["白", "黒", "グレー", "ネイビー", "青", "水色", "緑", "オリーブ", "カーキ",
-                      "イエロー", "マスタード", "オレンジ", "テラコッタ", "ブラウン", "ベージュ",
-                      "ピンク", "パープル", "レッド"]);
-  fill("chipsTone", ["くすんだ", "淡い", "濃い", "ビビッド", "落ち着いた", "モノトーン",
-                     "細かい", "大きい", "斜め"]);
-})();
-
 $("dPatUp").addEventListener("click", () => pickFile(setPattern));
 wireDrop($("dPatUp"), setPattern);
 async function setPattern(file) {
@@ -690,13 +612,12 @@ S.currentSlot = null;
 function snapshot(title) {
   const items = [];
   for (const it of Object.values(S.items)) {
-    const used = it.applied || it.name || it.room || it.pattern || it.prompt;
+    const used = it.applied || it.name || it.room || it.pattern;
     if (!used) continue;
     items.push({
       id: it.id, name: it.name, mode: it.mode, hex: it.hex,
       fit: it.fit, scale: it.scale, offX: it.offX, offY: it.offY, rot: it.rot,
       print: it.print, printColor: it.printColor, applied: it.applied,
-      prompt: it.prompt || "", variant: it.variant || 0,
       patternKind: it.patternKind || (it.pattern ? "gen" : null),
       patternName: it.patternName || "",
       patternBlob: it.patternKind === "file" ? it.patternBlob : null,
@@ -711,7 +632,7 @@ async function restore(data) {
   for (const it of Object.values(S.items)) {
     Object.assign(it, {
       name: "", mode: "color", hex: "#EE7A20",
-      pattern: null, patternBlob: null, patternKind: null, patternName: "", prompt: "", variant: 0,
+      pattern: null, patternBlob: null, patternKind: null, patternName: "",
       fit: "cover", scale: 100, offX: 0, offY: 0, rot: 0,
       print: "white", printColor: "#F3BE18", applied: false, room: null, roomBlob: null
     });
@@ -725,15 +646,9 @@ async function restore(data) {
       name: s.name, mode: s.mode, hex: s.hex,
       fit: s.fit, scale: s.scale, offX: s.offX, offY: s.offY, rot: s.rot,
       print: s.print, printColor: s.printColor, applied: s.applied,
-      prompt: s.prompt, variant: s.variant,
       patternKind: s.patternKind, patternName: s.patternName
     });
-    if (s.patternKind === "gen" && s.prompt) {
-      const out = PATTERN.generate(s.prompt, s.hex, s.variant || 0);
-      it.pattern = await new Promise(res => {
-        const img = new Image(); img.onload = () => res(img); img.src = out.canvas.toDataURL("image/png");
-      });
-    } else if (s.patternBlob) {
+    if (s.patternBlob) {
       it.patternBlob = s.patternBlob;
       it.pattern = await loadFile(s.patternBlob);
     }
@@ -943,7 +858,7 @@ function buildPrint() {
     pg.appendChild(el("div", "p-head",
       `<span class="t">${catNameOf(cat.id)}</span>
        <span class="s">${items.length}案</span>
-       <span class="r">solarich 着せ替えシートシュミレーション　/　${today}</span>`));
+       <span class="r">solarich 着せ替えシートシミュレーション　/　${today}</span>`));
 
     const grid = el("div", "p-grid");
     for (const item of items) {
@@ -1111,7 +1026,7 @@ function pngCategory(cat, items, today) {
   const { c, g } = newPage();
   const { PAD, W, H } = PNG;
   const top = pngHeader(g, catNameOf(cat.id), `${items.length}案`,
-    `solarich 着せ替えシートシュミレーション　/　${today}`) + 30;
+    `solarich 着せ替えシートシミュレーション　/　${today}`) + 30;
 
   const cols = 5, gap = 26, footH = 62;
   const imgW = (W - PAD * 2 - gap * (cols - 1)) / cols;
@@ -1215,7 +1130,7 @@ function buildShareHtml(title, today) {
   return `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}｜solarich 着せ替えシートシュミレーション</title>
+<title>${esc(title)}｜solarich 着せ替えシートシミュレーション</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;background:#F4F4F2;color:#1E1E1C;line-height:1.7;-webkit-font-smoothing:antialiased}
@@ -1243,11 +1158,11 @@ footer{text-align:center;font-size:.68rem;color:#9C9892;padding:0 20px 40px}
 <body>
 <header><div class="hd">
   <h1>${esc(title)}</h1>
-  <span class="s">solarich 着せ替えシートシュミレーション　${cats.length}カテゴリー / ${total}案</span>
+  <span class="s">solarich 着せ替えシートシミュレーション　${cats.length}カテゴリー / ${total}案</span>
   <span class="d">${esc(today)}</span>
 </div></header>
 <main>${body}</main>
-<footer>solarich 着せ替えシートシュミレーション｜このファイルは書き出し時点の内容です</footer>
+<footer>solarich 着せ替えシートシミュレーション｜このファイルは書き出し時点の内容です</footer>
 </body></html>`;
 }
 
@@ -1261,7 +1176,7 @@ $("btnExpHtml").addEventListener("click", async () => {
   msg.className = "saves-msg"; msg.textContent = "書き出し中…";
   try {
     const data = S.currentSlot ? await DB.get(slotKey(S.currentSlot)) : null;
-    const title = (data && data.title) || "solarich 着せ替えシートシュミレーション";
+    const title = (data && data.title) || "solarich 着せ替えシートシミュレーション";
     const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
     const html = buildShareHtml(title, today);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
