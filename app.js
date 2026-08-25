@@ -27,6 +27,7 @@ const S = {
   mask: null,      // cutpass.svg（シート形状）
   printSrc: null,  // print.svg のテキスト（印字レイヤー）
   shadeMap: null,  // 元画像の明暗だけを取り出した地図
+  shadowImg: null, // assets/shadow.png（出っ張りの落ち影）
   shade: true, shadeStrength: 100,
   items: {},       // id -> item
   current: null
@@ -95,6 +96,12 @@ function makeLayer(cw, ch, item) {
     g.drawImage(S.shadeMap, m.x(0), m.y(0), m.w(1), m.w(ih));
     g.restore();
     g.globalCompositeOperation = "source-over";
+  }
+
+  /* 出っ張りの落ち影（assets/shadow.png があれば重ねる）
+     抜き型と同じアートボードで書き出された透過PNGを想定 */
+  if (S.shadowImg) {
+    g.drawImage(S.shadowImg, m.x(MASK.x), m.y(MASK.y), m.w(MASK.w), m.h(MASK.h));
   }
 
   /* 抜き型で切り抜く */
@@ -1329,7 +1336,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.jpg が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.jpg?v=202608252352";
+  img.src = "assets/base.jpg?v=202608252357";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -1344,11 +1351,23 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608252352";
+  img.src = "assets/cutpass.svg?v=202608252357";
+})();
+
+/* 出っ張りの落ち影（assets/shadow.png / 任意） */
+(function initShadow() {
+  const img = new Image();
+  img.onload = () => {
+    S.shadowImg = img;
+    Object.keys(S.items).forEach(refreshCard);
+    if (S.current) repaintDetail();
+  };
+  img.onerror = () => {};      /* 無ければ影なしで動く */
+  img.src = "assets/shadow.png?v=202608252357";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608252352")
+fetch("assets/print.svg?v=202608252357")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
