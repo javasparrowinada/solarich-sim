@@ -124,21 +124,27 @@ function buildShadeMap() {
   catch (e) { return null; }          /* 別ドメインの画像などで読めない場合 */
   const d = im.data;
 
-  /* 明るさの基準は「シート面の平均」。ここが中間グレー＝色が変わらない点になる */
+  /* 明るさの基準はシート面の「中央値」。
+     平均だと真っ黒なディスプレイや端子に引きずられて基準が狂うため */
+  const hist = new Uint32Array(256);
   const sx = Math.max(0, Math.round(SHEET.x * W)), sy = Math.max(0, Math.round(SHEET.y * W));
   const sw = Math.round(SHEET.w * W), sh = Math.round(SHEET.h * W);
-  let sum = 0, n = 0;
+  let n = 0;
   for (let y = sy; y < sy + sh && y < H; y++) {
     for (let x = sx; x < sx + sw && x < W; x++) {
       const i = (y * W + x) * 4;
-      sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; n++;
+      const L = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      hist[Math.min(255, Math.max(0, L | 0))]++; n++;
     }
   }
-  const mean = n ? sum / n : 200;
+  let acc = 0, base = 200;
+  for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n / 2) { base = v || 1; break; } }
 
+  /* 元画像の明暗差は小さいので、そのままでは効かない。中央値を軸に広げる */
+  const GAIN = 3.2;
   for (let i = 0; i < d.length; i += 4) {
     const L = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    const v = Math.max(0, Math.min(255, 128 * L / mean));
+    const v = Math.max(0, Math.min(255, 128 * (1 + GAIN * (L / base - 1))));
     d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
   }
   g.putImageData(im, 0, 0);
@@ -1323,7 +1329,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.jpg が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.jpg?v=202608252346";
+  img.src = "assets/base.jpg?v=202608252352";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -1338,11 +1344,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608252346";
+  img.src = "assets/cutpass.svg?v=202608252352";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608252346")
+fetch("assets/print.svg?v=202608252352")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
