@@ -46,3 +46,15 @@ cd ~/solarich-sim && python3 -m http.server 8765
 
 - 保存はブラウザごと。別のPCやブラウザからは見えない
 - 共有はファイル（共有用HTML / PDF / PNG）を渡す方式。書き出した時点のコピーになる
+
+## デプロイ時の注意（キャッシュ）
+
+GitHub Pages はブラウザにファイルをキャッシュさせるため、更新しても古い画面が出ることがある。
+`index.html` の `<script src="...?v=…">` と `app.js` 内の `assets/...?v=…` の数字を
+更新のたびに揃えて変えること（日時を入れておけばよい）。
+
+```bash
+V=$(date +%Y%m%d%H%M)
+sed -i '' -E "s|(catalog\.js\|app\.js)\?v=[0-9]+|\1?v=$V|g" index.html
+sed -i '' -E "s|(assets/[a-z.]+)\?v=[0-9]+|\1?v=$V|g" app.js
+```

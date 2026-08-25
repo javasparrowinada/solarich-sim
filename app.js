@@ -1243,7 +1243,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.jpg が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.jpg";
+  img.src = "assets/base.jpg?v=202608252335";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -1258,11 +1258,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg";
+  img.src = "assets/cutpass.svg?v=202608252335";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg")
+fetch("assets/print.svg?v=202608252335")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
