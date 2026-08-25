@@ -354,6 +354,14 @@ input[type=range]{width:100%;accent-color:var(--navy)}
         </div>
 
         <div class="box">
+          <h4>質感</h4>
+          <label class="check" style="margin-top:0"><input type="checkbox" id="dShade" checked> 本体の陰影と光を反映する</label>
+          <div class="field"><div class="field-label">強さ <span class="val" id="vShade">100%</span></div>
+            <input type="range" id="dShadeStr" min="0" max="100" value="100"></div>
+          <div class="hint">元画像の明暗をシートに乗せます。出っ張りの陰影や、光の当たり方が再現されます。全案に共通の設定です。</div>
+        </div>
+
+        <div class="box">
           <h4>印字（アイコン・文字・ロゴ）</h4>
           <div class="seg" id="dPrint">
             <button data-print="white" class="active">白</button>
@@ -372,7 +380,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608252335"></script>
-<script src="app.js?v=202608252335"></script>
+<script src="catalog.js?v=202608252346"></script>
+<script src="app.js?v=202608252346"></script>
 </body>
 </html>
