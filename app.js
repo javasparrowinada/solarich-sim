@@ -3,17 +3,21 @@
 /* =========================================================
    シート領域 = 抜き型データ（assets/cutpass.svg）そのもの
    ---------------------------------------------------------
-   MASK  … cutpass.svg の viewBox 全体を、ベース画像に対する比率で
-           どこに置けば実機と一致するか。
+   MASK  … cutpass.svg の viewBox 全体を、どこに置けば実機と一致するか。
            ベース画像の穴（ディスプレイ・USB-A×2・USB-C×2）の中心と
-           抜き型の穴の中心を最小二乗で合わせて算出（残差 0.8px 以下）
+           抜き型の穴の中心を最小二乗で合わせて算出（残差 2.1px 以下 / 4000px中）
    SHEET … そのときのシート外形の範囲（模様の配置基準に使う）
+   ※ 数値はすべて「ベース画像の横幅を1」とする単位。縦もこの単位で持つので、
+     正方形でない画像でも扱える。ベース画像を差し替えたら再計算が必要。
    ========================================================= */
-const MASK  = { x: 0.057772, y: 0.198222, w: 0.893396, h: 0.631685 };
-const SHEET = { x: 0.175178, y: 0.326046, w: 0.658941, h: 0.376503 };
+const MASK  = { x: 0.039310, y: 0.042328, w: 0.925863, h: 0.654585 };
+const SHEET = { x: 0.160830, y: 0.174726, w: 0.683287, h: 0.390483 };
+
+/* 表示範囲の縦横比（マス目やサムネイルの形に使う） */
+const RATIO_W = 966, RATIO_H = 641;
 
 /* カード／プレビューで表示する範囲（余白を落とすためのトリミング） */
-const VIEW = { x0: 0.045, y0: 0.175, x1: 0.955, y1: 0.800 };
+const VIEW = { x0: 0.0170, y0: 0.0270, x1: 0.9830, y1: 0.6680 };
 
 /* =========================================================
    state（保存はしません。リロードで消えます）
@@ -125,9 +129,9 @@ function paint(canvas, item) {
   g.clearRect(0, 0, cw, ch);
   if (!S.base) return;
 
-  const BW = S.base.naturalWidth, BH = S.base.naturalHeight;
+  const BW = S.base.naturalWidth;
   g.drawImage(S.base,
-    VIEW.x0 * BW, VIEW.y0 * BH, (VIEW.x1 - VIEW.x0) * BW, (VIEW.y1 - VIEW.y0) * BH,
+    VIEW.x0 * BW, VIEW.y0 * BW, (VIEW.x1 - VIEW.x0) * BW, (VIEW.y1 - VIEW.y0) * BW,
     0, 0, cw, ch);
 
   if (item && item.applied) {
@@ -823,7 +827,7 @@ function buildPrint() {
   /* 行数に応じてマスの大きさを決める（A4横・余白14mmに収める） */
   const capH = 2.4, rowGap = 1.5, chrome = 12;      // mm
   const availH = 182 - chrome;
-  let cellW = (availH - cats.length * capH - (cats.length - 1) * rowGap) / cats.length * 910 / 625;
+  let cellW = (availH - cats.length * capH - (cats.length - 1) * rowGap) / cats.length * RATIO_W / RATIO_H;
   cellW = Math.min(cellW, 21.2);
   map.style.gridTemplateColumns = `24mm repeat(${ITEMS_PER_CATEGORY}, ${cellW.toFixed(2)}mm)`;
 
@@ -977,9 +981,9 @@ function pngOverview() {
   const cats = CATALOG.filter(c => c.items.some(ci => S.items[ci.id].applied));
   const rows = cats.length;
   let thH = (H - PAD * 2 - numH - rows * capH - rowGap * (rows - 1)) / rows;
-  let thW = thH * 910 / 625;
+  let thW = thH * RATIO_W / RATIO_H;
   const maxW = (W - PAD * 2 - labelW - colGap * cols) / cols;
-  if (thW > maxW) { thW = maxW; thH = thW * 625 / 910; }
+  if (thW > maxW) { thW = maxW; thH = thW * RATIO_H / RATIO_W; }
   const rowH = thH + capH;
   const x0 = Math.max(PAD, (W - (labelW + cols * thW + colGap * cols)) / 2);
   const y0 = PAD + Math.max(0, (H - PAD * 2 - numH - rows * rowH - rowGap * (rows - 1)) / 2);
@@ -1030,7 +1034,7 @@ function pngCategory(cat, items, today) {
 
   const cols = 5, gap = 26, footH = 62;
   const imgW = (W - PAD * 2 - gap * (cols - 1)) / cols;
-  const imgH = imgW * 625 / 910;
+  const imgH = imgW * RATIO_H / RATIO_W;
   const cellH = imgH + footH;
   const rowsN = Math.ceil(items.length / cols);
   const y0 = top + Math.max(0, (H - PAD - top - (rowsN * cellH + (rowsN - 1) * gap)) / 2);
@@ -1237,9 +1241,9 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
   img.onload = () => setBase(img);
   img.onerror = () => {
     $("baseLbl").textContent = "ベース画像 未設定";
-    $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
+    $("baseMsg").textContent = "assets/base.jpg が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png";
+  img.src = "assets/base.jpg";
 })();
 
 /* 抜き型（cutpass.svg） */
