@@ -943,7 +943,7 @@ function buildPrint() {
     pg.appendChild(el("div", "p-head",
       `<span class="t">${catNameOf(cat.id)}</span>
        <span class="s">${items.length}案</span>
-       <span class="r">SOLARICH 1000　着せ替えシート 検討一覧　/　${today}</span>`));
+       <span class="r">solarich 着せ替えシートシュミレーション　/　${today}</span>`));
 
     const grid = el("div", "p-grid");
     for (const item of items) {
@@ -1111,7 +1111,7 @@ function pngCategory(cat, items, today) {
   const { c, g } = newPage();
   const { PAD, W, H } = PNG;
   const top = pngHeader(g, catNameOf(cat.id), `${items.length}案`,
-    `SOLARICH 1000　着せ替えシート 検討一覧　/　${today}`) + 30;
+    `solarich 着せ替えシートシュミレーション　/　${today}`) + 30;
 
   const cols = 5, gap = 26, footH = 62;
   const imgW = (W - PAD * 2 - gap * (cols - 1)) / cols;
@@ -1215,7 +1215,7 @@ function buildShareHtml(title, today) {
   return `<!DOCTYPE html>
 <html lang="ja"><head><meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}｜SOLARICH 1000 着せ替えシート</title>
+<title>${esc(title)}｜solarich 着せ替えシートシュミレーション</title>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;background:#F4F4F2;color:#1E1E1C;line-height:1.7;-webkit-font-smoothing:antialiased}
@@ -1243,11 +1243,11 @@ footer{text-align:center;font-size:.68rem;color:#9C9892;padding:0 20px 40px}
 <body>
 <header><div class="hd">
   <h1>${esc(title)}</h1>
-  <span class="s">SOLARICH 1000 着せ替えシート 検討一覧　${cats.length}カテゴリー / ${total}案</span>
+  <span class="s">solarich 着せ替えシートシュミレーション　${cats.length}カテゴリー / ${total}案</span>
   <span class="d">${esc(today)}</span>
 </div></header>
 <main>${body}</main>
-<footer>SOLARICH 1000 着せ替えシート検討｜このファイルは書き出し時点の内容です</footer>
+<footer>solarich 着せ替えシートシュミレーション｜このファイルは書き出し時点の内容です</footer>
 </body></html>`;
 }
 
@@ -1261,7 +1261,7 @@ $("btnExpHtml").addEventListener("click", async () => {
   msg.className = "saves-msg"; msg.textContent = "書き出し中…";
   try {
     const data = S.currentSlot ? await DB.get(slotKey(S.currentSlot)) : null;
-    const title = (data && data.title) || "着せ替えシート 検討一覧";
+    const title = (data && data.title) || "solarich 着せ替えシートシュミレーション";
     const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
     const html = buildShareHtml(title, today);
     const blob = new Blob([html], { type: "text/html;charset=utf-8" });
