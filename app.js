@@ -10,14 +10,14 @@
    ※ 数値はすべて「ベース画像の横幅を1」とする単位。縦もこの単位で持つので、
      正方形でない画像でも扱える。ベース画像を差し替えたら再計算が必要。
    ========================================================= */
-const MASK  = { x: 0.039310, y: 0.042328, w: 0.925863, h: 0.654585 };
-const SHEET = { x: 0.160830, y: 0.174726, w: 0.683287, h: 0.390483 };
+const MASK  = { x: 0.118921, y: 0.062448, w: 0.765855, h: 0.541460 };
+const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
 
 /* 表示範囲の縦横比（マス目やサムネイルの形に使う） */
-const RATIO_W = 966, RATIO_H = 641;
+const RATIO_W = 217, RATIO_H = 145;
 
 /* カード／プレビューで表示する範囲（余白を落とすためのトリミング） */
-const VIEW = { x0: 0.0170, y0: 0.0270, x1: 0.9830, y1: 0.6680 };
+const VIEW = { x0: 0.0967, y0: 0.0516, x1: 0.9113, y1: 0.5959 };
 
 /* =========================================================
    state（保存はしません。リロードで消えます）
@@ -26,9 +26,7 @@ const S = {
   base: null,
   mask: null,      // cutpass.svg（シート形状）
   printSrc: null,  // print.svg のテキスト（印字レイヤー）
-  shadeMap: null,  // 元画像の明暗だけを取り出した地図
   shadowImg: null, // assets/shadow.png（出っ張りの落ち影）
-  shade: true, shadeStrength: 100,
   items: {},       // id -> item
   current: null
 };
@@ -87,86 +85,16 @@ function makeLayer(cw, ch, item) {
     g.fillRect(px, py, pw, ph);
   }
 
-  /* 元画像の明暗を乗せる（出っ張りの陰影・光のグラデが再現される） */
-  if (S.shade && S.shadeMap && S.shadeStrength > 0) {
-    g.save();
-    g.globalCompositeOperation = "soft-light";
-    g.globalAlpha = Math.min(1, S.shadeStrength / 100);
-    const ih = S.base.naturalHeight / S.base.naturalWidth;
-    g.drawImage(S.shadeMap, m.x(0), m.y(0), m.w(1), m.w(ih));
-    g.restore();
-    g.globalCompositeOperation = "source-over";
-  }
-
   /* 出っ張りの落ち影（assets/shadow.png があれば重ねる）
-     「PNG保存」と同じ画角＝VIEW の切り抜きそのままで書き出した透過PNGを想定。
-     つまみ本体が写っていても、このあと抜き型で切り抜かれるので影だけ残る。
-     ※ VIEW を変えたら影のPNGも作り直しが必要 */
-  if (S.shadowImg) g.drawImage(S.shadowImg, 0, 0, cw, ch);
+     抜き型（cutpass.svg）と同じアートボードで書き出した透過PNG。
+     つまみ本体が写っていても、このあと抜き型で切り抜かれるので影だけ残る */
+  if (S.shadowImg) g.drawImage(S.shadowImg, m.x(MASK.x), m.y(MASK.y), m.w(MASK.w), m.h(MASK.h));
 
   /* 抜き型で切り抜く */
   g.globalCompositeOperation = "destination-in";
   g.drawImage(S.mask, m.x(MASK.x), m.y(MASK.y), m.w(MASK.w), m.h(MASK.h));
   g.globalCompositeOperation = "source-over";
   return _layer;
-}
-
-/* ---------------------------------------------------------
-   陰影マップ
-   元画像の明暗を「シート面の平均を中間グレー」に正規化した画像。
-   色や柄の上に soft-light で重ねると、元の光の当たり方・
-   出っ張りの陰影がそのまま乗る。
-   --------------------------------------------------------- */
-function buildShadeMap() {
-  if (!S.base) return null;
-  const W = 1600;
-  const H = Math.round(W * S.base.naturalHeight / S.base.naturalWidth);
-  const c = document.createElement("canvas");
-  c.width = W; c.height = H;
-  const g = c.getContext("2d", { willReadFrequently: true });
-  g.drawImage(S.base, 0, 0, W, H);
-
-  let im;
-  try { im = g.getImageData(0, 0, W, H); }
-  catch (e) { return null; }          /* 別ドメインの画像などで読めない場合 */
-  const d = im.data;
-
-  /* 明るさの基準はシート面の「中央値」。
-     平均だと真っ黒なディスプレイや端子に引きずられて基準が狂うため */
-  const hist = new Uint32Array(256);
-  const sx = Math.max(0, Math.round(SHEET.x * W)), sy = Math.max(0, Math.round(SHEET.y * W));
-  const sw = Math.round(SHEET.w * W), sh = Math.round(SHEET.h * W);
-  let n = 0;
-  for (let y = sy; y < sy + sh && y < H; y++) {
-    for (let x = sx; x < sx + sw && x < W; x++) {
-      const i = (y * W + x) * 4;
-      const L = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-      hist[Math.min(255, Math.max(0, L | 0))]++; n++;
-    }
-  }
-  let acc = 0, base = 200;
-  for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= n / 2) { base = v || 1; break; } }
-
-  /* 元画像の明暗差は小さいので、そのままでは効かない。中央値を軸に広げる */
-  const GAIN = 3.2;
-  for (let i = 0; i < d.length; i += 4) {
-    const L = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    const v = Math.max(0, Math.min(255, 128 * (1 + GAIN * (L / base - 1))));
-    d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
-  }
-  g.putImageData(im, 0, 0);
-
-  /* 元画像に写り込んでいる印字を消す。
-     同じ位置に中間グレー（＝色を変えない値）を置いて打ち消す。
-     写真の文字はデータより少し太いので、少しずらして重ね塗りする */
-  const pimg = printImage("#808080");
-  if (pimg) {
-    const dx = MASK.x * W, dy = MASK.y * W, dw = MASK.w * W, dh = MASK.h * W;
-    const k = Math.max(1.5, W / 700);
-    for (const [ox, oy] of [[0,0],[-k,0],[k,0],[0,-k],[0,k],[-k,-k],[k,k],[-k,k],[k,-k]])
-      g.drawImage(pimg, dx + ox, dy + oy, dw, dh);
-  }
-  return c;
 }
 
 /* ---------------------------------------------------------
@@ -185,7 +113,6 @@ function printImage(color) {
     img.onload = () => {
       e.ready = true;
       /* 陰影マップは印字を打ち消すのに使うので、揃ってから作り直す */
-      if (color === "#808080" && S.base) S.shadeMap = buildShadeMap();
       Object.keys(S.items).forEach(refreshCard);
       if (S.current) repaintDetail();
     };
@@ -610,18 +537,6 @@ for (const [el, key, out, fmt] of sliders) {
     repaintDetail(); refreshCard(cur().id);
   });
 }
-
-/* 質感（陰影）— 全案に共通 */
-function repaintAll() {
-  Object.keys(S.items).forEach(refreshCard);
-  if (S.current) repaintDetail();
-}
-$("dShade").addEventListener("change", e => { S.shade = e.target.checked; repaintAll(); });
-$("dShadeStr").addEventListener("input", e => {
-  S.shadeStrength = +e.target.value;
-  $("vShade").textContent = S.shadeStrength + "%";
-  repaintAll();
-});
 
 /* 印字 */
 document.querySelectorAll("#dPrint button").forEach(b => {
@@ -1320,7 +1235,6 @@ $("btnExpPng").addEventListener("click", async () => {
 /* ベース画像 */
 function setBase(img) {
   S.base = img;
-  S.shadeMap = buildShadeMap();
   $("basebar").classList.add("ok");
   $("baseLbl").textContent = "ベース画像 読み込み済み";
   $("baseMsg").textContent = `${img.naturalWidth}×${img.naturalHeight}px`;
@@ -1334,9 +1248,9 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
   img.onload = () => setBase(img);
   img.onerror = () => {
     $("baseLbl").textContent = "ベース画像 未設定";
-    $("baseMsg").textContent = "assets/base.jpg が読み込めませんでした。右のボタンから選択してください。";
+    $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.jpg?v=202608260004";
+  img.src = "assets/base.png?v=202608260011";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -1351,7 +1265,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608260004";
+  img.src = "assets/cutpass.svg?v=202608260011";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -1363,16 +1277,14 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608260004";
+  img.src = "assets/shadow.png?v=202608260011";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608260004")
+fetch("assets/print.svg?v=202608260011")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
-    printImage("#808080");          /* 陰影マップ用に先に用意しておく */
-    if (S.base) S.shadeMap = buildShadeMap();
     Object.keys(S.items).forEach(refreshCard);
     if (S.current) repaintDetail();
   })

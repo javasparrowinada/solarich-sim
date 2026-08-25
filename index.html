@@ -92,7 +92,7 @@ button,input,select{font-family:inherit}
 .card{background:var(--white);border-radius:14px;border:1px solid rgba(0,0,0,.05);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;text-align:left;padding:0;width:100%;display:block}
 .card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(30,30,28,.13)}
 .card-visual{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
-.card-pane{background:#FBFBFA;aspect-ratio:966/641;position:relative;overflow:hidden}
+.card-pane{background:#FBFBFA;aspect-ratio:217/145;position:relative;overflow:hidden}
 .card-pane canvas{width:100%;height:100%;display:block}
 .card-pane img{width:100%;height:100%;object-fit:cover;display:block}
 .pane-tag{position:absolute;left:6px;top:6px;z-index:2;font-size:.56rem;font-weight:700;letter-spacing:.06em;background:rgba(255,255,255,.82);color:var(--ink-light);padding:2px 7px;border-radius:100px;pointer-events:none}
@@ -187,7 +187,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 .p-map .rowlbl small{font-size:5.5pt;font-weight:400;color:#9C9892}
 .p-map .colno{font-size:6.5pt;color:#9C9892;text-align:center;padding-bottom:.5mm}
 .p-map .mcell{display:flex;flex-direction:column;gap:.6mm}
-.p-map .mthumb{border:.4px solid #E2E0DC;border-radius:1.2mm;overflow:hidden;background:#FBFBFA;aspect-ratio:966/641}
+.p-map .mthumb{border:.4px solid #E2E0DC;border-radius:1.2mm;overflow:hidden;background:#FBFBFA;aspect-ratio:217/145}
 .p-map .mthumb img{width:100%;height:100%;object-fit:cover;display:block}
 .p-map .mthumb.empty{background:repeating-linear-gradient(45deg,#F7F6F4,#F7F6F4 1mm,#F1F0ED 1mm,#F1F0ED 2mm)}
 .p-map .mcap{font-size:5.2pt;line-height:1.2;height:2.4mm;color:#3A3A38;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -195,7 +195,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 /* カテゴリーページ */
 .p-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3.5mm}
 .p-cell{border:.5px solid #E2E0DC;border-radius:1.6mm;overflow:hidden;background:#fff}
-.p-main{background:#FBFBFA;aspect-ratio:966/641}
+.p-main{background:#FBFBFA;aspect-ratio:217/145}
 .p-main img{width:100%;height:100%;object-fit:cover;display:block}
 .p-foot{display:flex;gap:2mm;padding:2mm 2.2mm;align-items:center}
 .p-room{width:13mm;height:9mm;object-fit:cover;border-radius:1mm;border:.4px solid #E2E0DC;flex:none}
@@ -354,14 +354,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
         </div>
 
         <div class="box">
-          <h4>質感</h4>
-          <label class="check" style="margin-top:0"><input type="checkbox" id="dShade" checked> 本体の陰影と光を反映する</label>
-          <div class="field"><div class="field-label">強さ <span class="val" id="vShade">100%</span></div>
-            <input type="range" id="dShadeStr" min="0" max="100" value="100"></div>
-          <div class="hint">元画像の明暗をシートに乗せます。出っ張りの陰影や、光の当たり方が再現されます。全案に共通の設定です。</div>
-        </div>
-
-        <div class="box">
           <h4>印字（アイコン・文字・ロゴ）</h4>
           <div class="seg" id="dPrint">
             <button data-print="white" class="active">白</button>
@@ -380,7 +372,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608260004"></script>
-<script src="app.js?v=202608260004"></script>
+<script src="catalog.js?v=202608260011"></script>
+<script src="app.js?v=202608260011"></script>
 </body>
 </html>
