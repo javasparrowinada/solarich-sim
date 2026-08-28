@@ -193,6 +193,17 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 .p-map .mcap{font-size:5.2pt;line-height:1.2;height:2.4mm;color:#3A3A38;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 
 /* カテゴリーページ */
+.p-one{display:flex;flex-direction:column;height:100%}
+.p-one-head{display:flex;align-items:baseline;gap:8px;border-bottom:1.2px solid #1F3A5F;padding-bottom:2.5mm;margin-bottom:5mm}
+.p-one-head .no{font-size:15pt;font-weight:900;color:#1F3A5F;line-height:1}
+.p-one-head .nm{font-size:12pt;font-weight:700}
+.p-one-head .cat{font-size:8pt;color:#6E6B66}
+.p-one-head .code{font-size:8.5pt;color:#6E6B66;margin-left:auto}
+.p-one-main{width:228mm;margin:0 auto;border:.5px solid #E2E0DC;border-radius:2mm;overflow:hidden;background:#fff}
+.p-one-main img{width:100%;display:block}
+.p-one-room{display:flex;gap:3mm;align-items:flex-end;margin-top:4mm;justify-content:center}
+.p-one-room img{width:52mm;border:.5px solid #E2E0DC;border-radius:1.5mm;display:block}
+.p-one-room span{font-size:7pt;color:#9C9892}
 .p-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3.5mm}
 .p-cell{border:.5px solid #E2E0DC;border-radius:1.6mm;overflow:hidden;background:#fff}
 .p-main{background:#FBFBFA;aspect-ratio:217/145}
@@ -287,6 +298,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
             <span class="sp">
               <span class="state" id="applyState">反映前（ベースのまま）</span>
               <button class="btn btn-sm" id="dDownload">PNG保存</button>
+              <button class="btn btn-sm" id="dPdf">PDF保存</button>
             </span>
           </div>
           <div class="pv-canvas"><canvas id="dCanvas" width="1400" height="962"></canvas></div>
@@ -372,7 +384,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608282312"></script>
-<script src="app.js?v=202608282312"></script>
+<script src="catalog.js?v=202608282341"></script>
+<script src="app.js?v=202608282341"></script>
 </body>
 </html>
