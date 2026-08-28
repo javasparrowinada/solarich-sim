@@ -180,12 +180,13 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
 /* A4横・余白14mm の刷り面いっぱいの高さを持たせて、中身を天地中央に置く */
-.p-page{page-break-after:always;break-after:page;height:181mm;display:flex;align-items:center;justify-content:center}
+.p-page{page-break-after:always;break-after:page;height:181mm;display:flex;align-items:center;justify-content:center;position:relative}
 .p-page:last-child{page-break-after:auto;break-after:auto}
 
-.p-one{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
+.p-one{display:flex;align-items:center;justify-content:center;width:100%}
 .p-one img{width:258mm;display:block}
-.p-one .code{width:258mm;margin-top:2.5mm;text-align:right;font-size:8.5pt;color:#6E6B66;letter-spacing:.02em}
+/* カラーコードは紙の隅に置く。中央揃えの計算に含めないため */
+.p-one .code{position:absolute;right:0;bottom:0;font-size:8pt;color:#6E6B66;letter-spacing:.02em;line-height:1}
 </style>
 </head>
 <body>
@@ -349,7 +350,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608290111"></script>
-<script src="app.js?v=202608290111"></script>
+<script src="catalog.js?v=202608290121"></script>
+<script src="app.js?v=202608290121"></script>
 </body>
 </html>
