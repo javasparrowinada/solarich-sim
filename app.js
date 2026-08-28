@@ -46,8 +46,7 @@ for (const cat of CATALOG) {
       adj: { sat: 100, bright: 100, contrast: 100, cr: 0, mg: 0, yb: 0 },
       fit: "cover", scale: 100, offX: 0, offY: 0, rot: 0,
       print: "white", printColor: "#F3BE18",
-      applied: false,
-      room: null
+      applied: false
     };
   }
 }
@@ -314,10 +313,7 @@ function buildCard(item) {
   el.className = "card";
   el.innerHTML = `
     <div class="card-visual">
-      <div class="card-pane"><span class="pane-tag">本体</span><canvas width="${CARD_W}" height="${CARD_H}"></canvas></div>
-      <div class="card-pane room"><span class="pane-tag">イメージ</span>
-        <div class="room-empty"><span class="plus">＋</span>イメージ画像</div>
-      </div>
+      <div class="card-pane"><canvas width="${CARD_W}" height="${CARD_H}"></canvas></div>
     </div>
     <div class="card-meta">
       <span class="card-chip"></span>
@@ -353,17 +349,50 @@ function refreshCard(id) {
     name.classList.add("empty");
   }
 
-  const roomPane = el.querySelector(".card-pane.room");
-  roomPane.querySelectorAll("img").forEach(n => n.remove());
-  const empty = roomPane.querySelector(".room-empty");
-  if (item.room) {
-    empty.style.display = "none";
-    const img = document.createElement("img");
-    img.src = item.room.src;
-    roomPane.appendChild(img);
+  updateFilled();
+}
+
+function buildCard(item) {
+  const el = document.createElement("button");
+  el.className = "card";
+  el.innerHTML = `
+    <div class="card-visual">
+      <div class="card-pane"><canvas width="${CARD_W}" height="${CARD_H}"></canvas></div>
+    </div>
+    <div class="card-meta">
+      <span class="card-chip"></span>
+      <span class="card-name"></span>
+      <span class="card-no">${String(item.no).padStart(2, "0")}</span>
+    </div>`;
+  cardCanvas[item.id] = el.querySelector("canvas");
+  cardEl[item.id] = el;
+  el.addEventListener("click", () => openDetail(item.id));
+  refreshCard(item.id);
+  return el;
+}
+
+function refreshCard(id) {
+  const item = S.items[id], el = cardEl[id];
+  if (!el) return;
+  paint(cardCanvas[id], item);
+
+  const chip = el.querySelector(".card-chip");
+  const name = el.querySelector(".card-name");
+  if (item.applied) {
+    if (item.mode === "pattern" && item.pattern) {
+      chip.style.background = `url(${item.pattern.src}) center/cover`;
+    } else {
+      chip.style.background = item.hex;
+    }
+    chip.style.display = "";
+    name.textContent = item.name || (item.mode === "pattern" ? "（模様・名称未設定）" : item.hex);
+    name.classList.remove("empty");
   } else {
-    empty.style.display = "";
+    chip.style.display = "none";
+    name.textContent = "未設定";
+    name.classList.add("empty");
   }
+
   updateFilled();
 }
 
@@ -404,7 +433,6 @@ function openDetail(id) {
   $("dPrintHex").value = it.printColor.toUpperCase();
 
   refreshPatInfo();
-  refreshRoom();
   refreshApplyBtn();
   repaintDetail();
 
@@ -467,34 +495,6 @@ function refreshPatInfo() {
   } else {
     box.classList.remove("show");
   }
-}
-
-function refreshRoom() {
-  const it = cur();
-  const wrap = $("dRoomWrap");
-  wrap.innerHTML = "";
-  if (it.room) {
-    const img = document.createElement("img");
-    img.src = it.room.src;
-    wrap.className = "room-box";
-    wrap.appendChild(img);
-  } else {
-    wrap.className = "";
-    const d = document.createElement("div");
-    d.className = "room-drop";
-    d.innerHTML = "<strong>イメージ画像をドロップ / クリックして選択</strong><span>部屋の写真など、設置シーンの画像</span>";
-    d.addEventListener("click", () => pickFile(setRoom));
-    wireDrop(d, setRoom);
-    wrap.appendChild(d);
-  }
-}
-
-async function setRoom(file) {
-  const it = cur(); if (!it) return;
-  it.room = await loadFile(file);
-  it.roomBlob = file;          // 保存スロット用に原本を持っておく
-  refreshRoom();
-  refreshCard(it.id);
 }
 
 /* =========================================================
@@ -568,6 +568,29 @@ async function setPattern(file) {
   $("dPatArea").style.display = "";
   refreshPatInfo(); repaintDetail(); refreshCard(it.id);
 }
+/* 調整後の柄そのものを画像として保存する（元の解像度のまま） */
+$("dPatSave").addEventListener("click", () => {
+  const it = cur();
+  if (!it || !it.pattern) return;
+  const src = adjustedPattern(it);
+  const W = src.naturalWidth || src.width, H = src.naturalHeight || src.height;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  c.getContext("2d").drawImage(src, 0, 0);
+
+  const d = new Date(), pad = n => String(n).padStart(2, "0");
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const base = safeName((it.patternName || "柄").replace(/\.[^.]+$/, ""));
+  const tag = isAdjDefault(it.adj || ADJ_DEFAULT) ? "" : "_調整済み";
+  c.toBlob(blob => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${base}${tag}_${stamp}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }, "image/png");
+});
+
 $("dPatClear").addEventListener("click", () => {
   const it = cur();
   it.pattern = null; it.patternName = ""; it.patternKind = null; it.patternBlob = null; it._adjCache = null;
@@ -648,10 +671,6 @@ $("dAdjReset").addEventListener("click", () => {
   syncAdj(); repaintDetail(); refreshCard(it.id);
 });
 
-$("dRoomPick").addEventListener("click", () => pickFile(setRoom));
-$("dRoomClear").addEventListener("click", () => {
-  cur().room = null; cur().roomBlob = null; refreshRoom(); refreshCard(cur().id);
-});
 
 /* =========================================================
    単体の書き出し（PNG）
@@ -722,7 +741,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608290124";
+  img.src = "assets/base.png?v=202608290134";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -737,7 +756,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608290124";
+  img.src = "assets/cutpass.svg?v=202608290134";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -749,11 +768,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608290124";
+  img.src = "assets/shadow.png?v=202608290134";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608290124")
+fetch("assets/print.svg?v=202608290134")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;

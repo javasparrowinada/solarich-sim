@@ -91,13 +91,10 @@ button,input,select{font-family:inherit}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .card{background:var(--white);border-radius:14px;border:1px solid rgba(0,0,0,.05);box-shadow:var(--shadow);overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;text-align:left;padding:0;width:100%;display:block}
 .card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(30,30,28,.13)}
-.card-visual{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.card-visual{background:var(--line)}
 .card-pane{background:#FBFBFA;aspect-ratio:1527/1000;position:relative;overflow:hidden}
 .card-pane canvas{width:100%;height:100%;display:block}
 .card-pane img{width:100%;height:100%;object-fit:cover;display:block}
-.pane-tag{position:absolute;left:6px;top:6px;z-index:2;font-size:.56rem;font-weight:700;letter-spacing:.06em;background:rgba(255,255,255,.82);color:var(--ink-light);padding:2px 7px;border-radius:100px;pointer-events:none}
-.room-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:100%;height:100%;color:var(--ink-faint);font-size:.66rem;text-align:center;background:repeating-linear-gradient(45deg,#F7F6F4,#F7F6F4 8px,#F1F0ED 8px,#F1F0ED 16px)}
-.room-empty .plus{font-size:1.05rem;line-height:1}
 .card-meta{padding:10px 13px 12px;display:flex;align-items:center;gap:9px}
 .card-chip{width:22px;height:22px;border-radius:6px;border:1px solid rgba(0,0,0,.12);flex:none}
 .card-name{font-size:.8rem;font-weight:700;flex:1;line-height:1.4}
@@ -129,12 +126,6 @@ button,input,select{font-family:inherit}
 .pv-canvas canvas{width:100%;height:auto;display:block}
 .state{font-size:.66rem;font-weight:700;color:var(--ink-faint);background:#F1F0ED;padding:3px 10px;border-radius:100px}
 .state.on{color:var(--white);background:var(--accent)}
-.room-box{width:100%;border-radius:10px;overflow:hidden;background:#FBFBFA}
-.room-box img{width:100%;height:auto;display:block;max-height:420px;object-fit:cover}
-.room-drop{border:2px dashed rgba(0,0,0,.14);border-radius:10px;padding:30px 16px;text-align:center;cursor:pointer;background:#FBFBFA;transition:all .15s}
-.room-drop:hover,.room-drop.over{border-color:var(--navy);background:var(--navy-light)}
-.room-drop strong{display:block;font-size:.8rem;margin-bottom:2px}
-.room-drop span{font-size:.7rem;color:var(--ink-light)}
 
 .ctrl-col{display:flex;flex-direction:column;gap:13px}
 .box{background:var(--white);border-radius:14px;border:1px solid rgba(0,0,0,.05);box-shadow:var(--shadow);padding:15px 17px}
@@ -259,15 +250,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
           <div class="pv-canvas"><canvas id="dCanvas" width="1400" height="962"></canvas></div>
         </div>
 
-        <div class="pv">
-          <div class="pv-title">イメージ画像（設置シーン）
-            <span class="sp">
-              <button class="btn btn-sm" id="dRoomPick">画像を選ぶ</button>
-              <button class="btn btn-sm btn-ghost" id="dRoomClear">削除</button>
-            </span>
-          </div>
-          <div id="dRoomWrap"></div>
-        </div>
       </div>
 
       <div class="ctrl-col">
@@ -303,6 +285,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
               <div class="mini-up" id="dPatUp">模様画像をドロップ / クリックして選択</div>
               <div class="pat-info" id="dPatInfo">
                 <img id="dPatThumb" alt=""><span class="m" id="dPatMeta"></span>
+                <button class="btn btn-sm" id="dPatSave">柄を保存</button>
                 <button class="btn btn-sm btn-ghost" id="dPatClear">削除</button>
               </div>
             </div>
@@ -351,7 +334,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608290124"></script>
-<script src="app.js?v=202608290124"></script>
+<script src="catalog.js?v=202608290134"></script>
+<script src="app.js?v=202608290134"></script>
 </body>
 </html>
