@@ -170,7 +170,8 @@ function adjustedPattern(item) {
   const a = item.adj || ADJ_DEFAULT;
   if (isAdjDefault(a)) return item.pattern;
 
-  const key = adjKey(a);
+  /* どの画像かをキーに含めないと、模様を差し替えたときに前の画像が残る */
+  const key = item.pattern.src + "|" + adjKey(a);
   if (item._adjCache && item._adjCache.key === key) return item._adjCache.canvas;
 
   const img = item.pattern;
@@ -557,6 +558,7 @@ wireDrop($("dPatUp"), setPattern);
 async function setPattern(file) {
   const it = cur(); if (!it) return;
   it.pattern = await loadFile(file);
+  it._adjCache = null;
   it.patternBlob = file;       // 保存スロット用
   it.patternKind = "file";
   it.patternName = file.name;
@@ -568,7 +570,7 @@ async function setPattern(file) {
 }
 $("dPatClear").addEventListener("click", () => {
   const it = cur();
-  it.pattern = null; it.patternName = ""; it.patternKind = null; it.patternBlob = null;
+  it.pattern = null; it.patternName = ""; it.patternKind = null; it.patternBlob = null; it._adjCache = null;
   refreshPatInfo(); repaintDetail(); refreshCard(it.id);
 });
 
@@ -671,25 +673,6 @@ $("dPdf").addEventListener("click", () => {
   setTimeout(() => window.print(), 150);
 });
 
-$("dDownload").addEventListener("click", () => {
-  const it = cur(); if (!it) return;
-  const W = 2400;
-  const c = document.createElement("canvas");
-  c.width = W;
-  c.height = Math.round(W * (VIEW.y1 - VIEW.y0) / (VIEW.x1 - VIEW.x0));
-  paint(c, it);
-  const parts = [safeName(catNameOf(it.catId)), String(it.no).padStart(2, "0")];
-  if (it.name) parts.push(safeName(it.name));
-  if (!it.applied) parts.push("反映前");
-  c.toBlob(blob => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = parts.join("_") + ".png";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-  }, "image/png");
-});
-
 /* =========================================================
    保存スロット（3件・IndexedDB）
    生成した柄はプロンプトから作り直せるので画像は保存しない。
@@ -762,6 +745,7 @@ async function restore(data) {
     if (s.patternBlob) {
       it.patternBlob = s.patternBlob;
       it.pattern = await loadFile(s.patternBlob);
+      it._adjCache = null;
     }
     if (s.roomBlob) {
       it.roomBlob = s.roomBlob;
@@ -920,7 +904,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608290037";
+  img.src = "assets/base.png?v=202608290046";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -935,7 +919,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608290037";
+  img.src = "assets/cutpass.svg?v=202608290046";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -947,11 +931,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608290037";
+  img.src = "assets/shadow.png?v=202608290046";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608290037")
+fetch("assets/print.svg?v=202608290046")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
