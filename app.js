@@ -578,21 +578,11 @@ $("dPdf").addEventListener("click", () => {
   const it = cur(); if (!it) return;
   if (!S.base || !S.mask) { alert("画像の読み込みが終わっていません。"); return; }
 
-  const label = it.mode === "pattern" && it.pattern ? (it.patternName || "模様") : it.hex.toUpperCase();
   const root = $("printRoot");
   root.innerHTML = "";
   const pg = document.createElement("div");
   pg.className = "p-page";
-  pg.innerHTML = `<div class="p-one">
-      <div class="p-one-head">
-        <span class="no">${String(it.no).padStart(2, "0")}</span>
-        <span class="nm">${it.name || "（名称未設定）"}</span>
-        <span class="cat">${catNameOf(it.catId)}</span>
-        <span class="code">${label}${it.applied ? "" : "　※反映前"}</span>
-      </div>
-      <div class="p-one-main"><img src="${shot(it, 2000)}" alt=""></div>
-      ${it.room ? `<div class="p-one-room"><img src="${it.room.src}" alt=""><span>イメージ画像</span></div>` : ""}
-    </div>`;
+  pg.innerHTML = `<div class="p-one"><img src="${shot(it, 2400)}" alt=""></div>`;
   root.appendChild(pg);
   setTimeout(() => window.print(), 150);
 });
@@ -843,7 +833,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608282345";
+  img.src = "assets/base.png?v=202608290016";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -858,7 +848,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608282345";
+  img.src = "assets/cutpass.svg?v=202608290016";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -870,11 +860,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608282345";
+  img.src = "assets/shadow.png?v=202608290016";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608282345")
+fetch("assets/print.svg?v=202608290016")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
