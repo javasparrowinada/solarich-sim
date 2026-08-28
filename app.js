@@ -14,10 +14,10 @@ const MASK  = { x: 0.118921, y: 0.062448, w: 0.765855, h: 0.541460 };
 const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
 
 /* 表示範囲の縦横比（マス目やサムネイルの形に使う） */
-const RATIO_W = 217, RATIO_H = 145;
+const RATIO_W = 1527, RATIO_H = 1000;
 
 /* カード／プレビューで表示する範囲（余白を落とすためのトリミング） */
-const VIEW = { x0: 0.0967, y0: 0.0516, x1: 0.9113, y1: 0.5959 };
+const VIEW = { x0: 0.0967, y0: 0.0491, x1: 0.9113, y1: 0.5825 };
 
 /* =========================================================
    state（保存はしません。リロードで消えます）
@@ -722,7 +722,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608290050";
+  img.src = "assets/base.png?v=202608290111";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -737,7 +737,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608290050";
+  img.src = "assets/cutpass.svg?v=202608290111";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -749,11 +749,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608290050";
+  img.src = "assets/shadow.png?v=202608290111";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608290050")
+fetch("assets/print.svg?v=202608290111")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
