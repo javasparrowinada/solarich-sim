@@ -658,222 +658,37 @@ $("dRoomClear").addEventListener("click", () => {
    ========================================================= */
 function safeName(s) { return String(s).replace(/[\\/:*?"<>|]/g, "_").trim(); }
 
+/* PDFのファイル名はブラウザがページのタイトルから作るので、
+   保存の直前だけタイトルを一意な名前に差し替える */
+const PAGE_TITLE = document.title;
+function pdfName(it) {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const label = it.mode === "pattern" && it.pattern
+    ? (it.patternName || "模様").replace(/\.[^.]+$/, "")
+    : it.hex.toUpperCase().replace("#", "");
+  const parts = [safeName(catNameOf(it.catId)), String(it.no).padStart(2, "0")];
+  if (it.name) parts.push(safeName(it.name));
+  parts.push(safeName(label), stamp);
+  return parts.join("_");
+}
+
 $("dPdf").addEventListener("click", () => {
   const it = cur(); if (!it) return;
   if (!S.base || !S.mask) { alert("画像の読み込みが終わっていません。"); return; }
 
+  const label = it.mode === "pattern" && it.pattern ? (it.patternName || "模様") : it.hex.toUpperCase();
   const root = $("printRoot");
   root.innerHTML = "";
   const pg = document.createElement("div");
   pg.className = "p-page";
-  const label = it.mode === "pattern" && it.pattern ? (it.patternName || "模様") : it.hex.toUpperCase();
   pg.innerHTML = `<div class="p-one"><img src="${shot(it, 2400)}" alt="">
     <div class="code">${label}</div></div>`;
   root.appendChild(pg);
+
+  document.title = pdfName(it);
   setTimeout(() => window.print(), 150);
-});
-
-/* =========================================================
-   保存スロット（3件・IndexedDB）
-   生成した柄はプロンプトから作り直せるので画像は保存しない。
-   アップロードした画像だけ原本を保存する。
-   ========================================================= */
-const DB = (() => {
-  let p;
-  const open = () => p || (p = new Promise((res, rej) => {
-    const r = indexedDB.open("solarich-1000", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("slots");
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  }));
-  const store = async mode => (await open()).transaction("slots", mode).objectStore("slots");
-  const wrap = q => new Promise((res, rej) => { q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
-  return {
-    async put(k, v) { return wrap((await store("readwrite")).put(v, k)); },
-    async get(k) { return wrap((await store("readonly")).get(k)); },
-    async del(k) { return wrap((await store("readwrite")).delete(k)); }
-  };
-})();
-
-const SLOT_COUNT = 10;
-const SLOTS = Array.from({ length: SLOT_COUNT }, (_, i) => i + 1);
-const slotKey = n => "slot" + n;
-S.currentSlot = null;
-
-function snapshot(title) {
-  const items = [];
-  for (const it of Object.values(S.items)) {
-    const used = it.applied || it.name || it.room || it.pattern;
-    if (!used) continue;
-    items.push({
-      id: it.id, name: it.name, mode: it.mode, hex: it.hex,
-      fit: it.fit, scale: it.scale, offX: it.offX, offY: it.offY, rot: it.rot,
-      print: it.print, printColor: it.printColor, applied: it.applied,
-      adj: { ...(it.adj || ADJ_DEFAULT) },
-      patternKind: it.patternKind || (it.pattern ? "gen" : null),
-      patternName: it.patternName || "",
-      patternBlob: it.patternKind === "file" ? it.patternBlob : null,
-      roomBlob: it.roomBlob || null
-    });
-  }
-  return { title: title || "", savedAt: new Date().toISOString(), catNames: { ...S.catNames }, items };
-}
-
-async function restore(data) {
-  /* いったん全部まっさらに戻す */
-  for (const it of Object.values(S.items)) {
-    Object.assign(it, {
-      name: "", mode: "color", hex: "#EE7A20",
-      pattern: null, patternBlob: null, patternKind: null, patternName: "",
-      fit: "cover", scale: 100, offX: 0, offY: 0, rot: 0,
-      print: "white", printColor: "#F3BE18", applied: false, room: null, roomBlob: null,
-      adj: { ...ADJ_DEFAULT }, _adjCache: null
-    });
-  }
-  S.catNames = { ...data.catNames };
-
-  for (const s of data.items) {
-    const it = S.items[s.id];
-    if (!it) continue;
-    Object.assign(it, {
-      name: s.name, mode: s.mode, hex: s.hex,
-      fit: s.fit, scale: s.scale, offX: s.offX, offY: s.offY, rot: s.rot,
-      print: s.print, printColor: s.printColor, applied: s.applied,
-      adj: { ...ADJ_DEFAULT, ...(s.adj || {}) }, _adjCache: null,
-      patternKind: s.patternKind, patternName: s.patternName
-    });
-    if (s.patternBlob) {
-      it.patternBlob = s.patternBlob;
-      it.pattern = await loadFile(s.patternBlob);
-      it._adjCache = null;
-    }
-    if (s.roomBlob) {
-      it.roomBlob = s.roomBlob;
-      it.room = await loadFile(s.roomBlob);
-    }
-  }
-  buildCatalog();
-  if (S.current) openDetail(S.current);
-}
-
-function savesMsg(m, cls) {
-  const el = $("savesMsg");
-  el.textContent = m; el.className = "saves-msg" + (cls ? " " + cls : "");
-}
-
-function slotLabel(data, n) {
-  return (data && data.title) ? data.title : (data ? `版 ${n}` : "");
-}
-function updateSlotLabel(data, n) {
-  $("slotLabel").textContent = data ? slotLabel(data, n) : "未保存";
-}
-
-async function renderSlots() {
-  const list = $("slotList");
-  list.innerHTML = "";
-
-  for (const n of SLOTS) {
-    const data = await DB.get(slotKey(n)).catch(() => null);
-    const row = document.createElement("div");
-    row.className = "vrow " + (data ? "filled" : "empty") + (S.currentSlot === n ? " on" : "");
-
-    const dot = document.createElement("span");
-    dot.className = "vdot";
-    row.appendChild(dot);
-
-    const name = document.createElement("input");
-    name.className = "vname";
-    name.type = "text";
-    name.value = data ? slotLabel(data, n) : "";
-    name.placeholder = `版 ${n}（空き）`;
-    name.disabled = !data;
-    name.addEventListener("input", () => {
-      clearTimeout(name._t);
-      name._t = setTimeout(async () => {
-        const cur = await DB.get(slotKey(n));
-        if (!cur) return;
-        cur.title = name.value.trim();
-        await DB.put(slotKey(n), cur);
-        if (S.currentSlot === n) updateSlotLabel(cur, n);
-      }, 400);
-    });
-    row.appendChild(name);
-
-    const foot = document.createElement("div");
-    foot.className = "vfoot";
-    const meta = document.createElement("span");
-    meta.className = "vmeta";
-    meta.textContent = data
-      ? new Date(data.savedAt).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })
-        + `　${data.items.filter(i => i.applied).length}案`
-      : "未保存";
-    foot.appendChild(meta);
-
-    const mk = (label, cls, fn) => {
-      const b = document.createElement("button");
-      b.className = "btn btn-sm" + (cls ? " " + cls : "");
-      b.textContent = label;
-      b.addEventListener("click", fn);
-      foot.appendChild(b);
-    };
-
-    if (!data) {
-      mk("ここに保存", "btn-primary", async () => {
-        try {
-          await DB.put(slotKey(n), snapshot(`版 ${n}`));
-          S.currentSlot = n;
-          const d = await DB.get(slotKey(n));
-          updateSlotLabel(d, n);
-          savesMsg(`版 ${n} として保存しました。名称を入力できます。`, "ok");
-          await renderSlots();
-          const inp = list.querySelectorAll(".vname")[n - 1];
-          if (inp) { inp.focus(); inp.select(); }
-        } catch (e) { savesMsg("保存できませんでした：" + e.message, "err"); }
-      });
-    } else {
-      if (S.currentSlot !== n) {
-        mk("切替", "btn-primary", async () => {
-          if (!confirm(`「${slotLabel(data, n)}」に切り替えます。\n保存していない変更は失われます。よろしいですか？`)) return;
-          try {
-            await restore(data);
-            S.currentSlot = n;
-            updateSlotLabel(data, n);
-            savesMsg(`「${slotLabel(data, n)}」に切り替えました。`, "ok");
-            renderSlots();
-          } catch (e) { savesMsg("切り替えられませんでした：" + e.message, "err"); }
-        });
-      }
-      mk("上書き保存", "", async () => {
-        if (!confirm(`「${slotLabel(data, n)}」をいまの内容で上書きします。よろしいですか？`)) return;
-        try {
-          await DB.put(slotKey(n), snapshot(data.title || `版 ${n}`));
-          S.currentSlot = n;
-          savesMsg(`「${slotLabel(data, n)}」を上書きしました。`, "ok");
-          renderSlots();
-        } catch (e) { savesMsg("保存できませんでした：" + e.message, "err"); }
-      });
-      mk("削除", "btn-ghost", async () => {
-        if (!confirm(`「${slotLabel(data, n)}」を削除します。よろしいですか？`)) return;
-        await DB.del(slotKey(n));
-        if (S.currentSlot === n) { S.currentSlot = null; updateSlotLabel(null, n); }
-        savesMsg("削除しました。");
-        renderSlots();
-      });
-    }
-    row.appendChild(foot);
-    list.appendChild(row);
-  }
-}
-
-$("btnSaves").addEventListener("click", e => {
-  e.stopPropagation();
-  const p = $("savePanel");
-  p.classList.toggle("show");
-  if (p.classList.contains("show")) { savesMsg(""); renderSlots(); }
-});
-document.addEventListener("click", e => {
-  const p = $("savePanel");
-  if (p.classList.contains("show") && !p.contains(e.target)) p.classList.remove("show");
 });
 
 /* 印刷用のプレビュー画像を作る */
@@ -884,7 +699,10 @@ function shot(item, w) {
   paint(c, item);
   return c.toDataURL("image/png");
 }
-window.addEventListener("afterprint", () => { $("printRoot").innerHTML = ""; });
+window.addEventListener("afterprint", () => {
+  $("printRoot").innerHTML = "";
+  document.title = PAGE_TITLE;
+});
 
 /* ベース画像 */
 function setBase(img) {
@@ -904,7 +722,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608290046";
+  img.src = "assets/base.png?v=202608290050";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -919,7 +737,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608290046";
+  img.src = "assets/cutpass.svg?v=202608290050";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -931,11 +749,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608290046";
+  img.src = "assets/shadow.png?v=202608290050";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608290046")
+fetch("assets/print.svg?v=202608290050")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;

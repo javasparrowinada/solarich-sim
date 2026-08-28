@@ -179,10 +179,11 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   #printRoot{display:block}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
-.p-page{page-break-after:always;break-after:page}
+/* A4横・余白14mm の刷り面いっぱいの高さを持たせて、中身を天地中央に置く */
+.p-page{page-break-after:always;break-after:page;height:181mm;display:flex;align-items:center;justify-content:center}
 .p-page:last-child{page-break-after:auto;break-after:auto}
 
-.p-one{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+.p-one{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%}
 .p-one img{width:258mm;display:block}
 .p-one .code{width:258mm;margin-top:2.5mm;text-align:right;font-size:8.5pt;color:#6E6B66;letter-spacing:.02em}
 </style>
@@ -348,7 +349,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608290046"></script>
-<script src="app.js?v=202608290046"></script>
+<script src="catalog.js?v=202608290050"></script>
+<script src="app.js?v=202608290050"></script>
 </body>
 </html>
