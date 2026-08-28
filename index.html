@@ -176,23 +176,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 }
 .p-page{page-break-after:always;break-after:page;padding:0 0 4mm}
 .p-page:last-child{page-break-after:auto;break-after:auto}
-.p-head{display:flex;align-items:baseline;gap:8px;border-bottom:1.2px solid #1F3A5F;padding-bottom:2.5mm;margin-bottom:4mm}
-.p-head .t{font-size:11pt;font-weight:900;color:#1F3A5F}
-.p-head .s{font-size:8pt;color:#6E6B66}
-.p-head .r{margin-left:auto;font-size:7pt;color:#9C9892}
 
-/* 全体マップ（A4横の余白14mmに収まる寸法で固定） */
-.p-map{display:grid;grid-template-columns:24mm repeat(10,18.5mm);column-gap:3mm;row-gap:1.5mm;justify-content:center}
-.p-map .rowlbl{font-size:7.5pt;font-weight:700;color:#1F3A5F;display:flex;flex-direction:column;justify-content:center;line-height:1.25;padding-right:1mm}
-.p-map .rowlbl small{font-size:5.5pt;font-weight:400;color:#9C9892}
-.p-map .colno{font-size:6.5pt;color:#9C9892;text-align:center;padding-bottom:.5mm}
-.p-map .mcell{display:flex;flex-direction:column;gap:.6mm}
-.p-map .mthumb{border:.4px solid #E2E0DC;border-radius:1.2mm;overflow:hidden;background:#FBFBFA;aspect-ratio:217/145}
-.p-map .mthumb img{width:100%;height:100%;object-fit:cover;display:block}
-.p-map .mthumb.empty{background:repeating-linear-gradient(45deg,#F7F6F4,#F7F6F4 1mm,#F1F0ED 1mm,#F1F0ED 2mm)}
-.p-map .mcap{font-size:5.2pt;line-height:1.2;height:2.4mm;color:#3A3A38;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-
-/* カテゴリーページ */
 .p-one{display:flex;flex-direction:column;height:100%}
 .p-one-head{display:flex;align-items:baseline;gap:8px;border-bottom:1.2px solid #1F3A5F;padding-bottom:2.5mm;margin-bottom:5mm}
 .p-one-head .no{font-size:15pt;font-weight:900;color:#1F3A5F;line-height:1}
@@ -204,17 +188,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 .p-one-room{display:flex;gap:3mm;align-items:flex-end;margin-top:4mm;justify-content:center}
 .p-one-room img{width:52mm;border:.5px solid #E2E0DC;border-radius:1.5mm;display:block}
 .p-one-room span{font-size:7pt;color:#9C9892}
-.p-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3.5mm}
-.p-cell{border:.5px solid #E2E0DC;border-radius:1.6mm;overflow:hidden;background:#fff}
-.p-main{background:#FBFBFA;aspect-ratio:217/145}
-.p-main img{width:100%;height:100%;object-fit:cover;display:block}
-.p-foot{display:flex;gap:2mm;padding:2mm 2.2mm;align-items:center}
-.p-room{width:13mm;height:9mm;object-fit:cover;border-radius:1mm;border:.4px solid #E2E0DC;flex:none}
-.p-room.none{background:repeating-linear-gradient(45deg,#F7F6F4,#F7F6F4 1mm,#F1F0ED 1mm,#F1F0ED 2mm)}
-.p-txt{min-width:0;flex:1}
-.p-no{font-size:11pt;font-weight:900;color:#1F3A5F;line-height:1;letter-spacing:-.02em}
-.p-name{font-size:7.5pt;font-weight:700;line-height:1.3;word-break:break-all}
-.p-code{font-size:6.5pt;color:#6E6B66;letter-spacing:.02em}
 </style>
 </head>
 <body>
@@ -225,7 +198,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
     <div class="topbar-actions">
       <button class="btn btn-sm" id="btnBase">ベース画像を差し替え</button>
       <button class="btn btn-sm" id="btnSaves">版：<b id="slotLabel">未保存</b> ▾</button>
-      <button class="btn btn-sm btn-primary" id="btnExport">一覧を書き出し</button>
     </div>
   </div>
   <nav class="catnav" id="catnav"></nav>
@@ -236,22 +208,6 @@ input[type=range]{width:100%;accent-color:var(--navy)}
     <div class="saves-msg" id="savesMsg"></div>
   </div>
 
-  <div class="saves" id="exportPanel">
-    <div class="saves-head">一覧の書き出し<span>登録済みの案だけを出力します</span></div>
-    <div class="slot">
-      <div class="slot-i"><b>PDF</b><span class="slot-meta">A4横・印刷ダイアログから保存</span></div>
-      <button class="btn btn-sm" id="btnExpPdf">書き出し</button>
-    </div>
-    <div class="slot">
-      <div class="slot-i"><b>PNG</b><span class="slot-meta">1920×1080・ページごとに1枚</span></div>
-      <button class="btn btn-sm" id="btnExpPng">書き出し</button>
-    </div>
-    <div class="slot">
-      <div class="slot-i"><b>共有用HTML</b><span class="slot-meta">1ファイル完結。そのまま送れます</span></div>
-      <button class="btn btn-sm" id="btnExpHtml">書き出し</button>
-    </div>
-    <div class="saves-msg" id="expMsg"></div>
-  </div>
 </div>
 
 <div class="hero">
@@ -384,7 +340,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608282341"></script>
-<script src="app.js?v=202608282341"></script>
+<script src="catalog.js?v=202608282345"></script>
+<script src="app.js?v=202608282345"></script>
 </body>
 </html>

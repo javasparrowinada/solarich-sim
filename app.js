@@ -807,7 +807,6 @@ async function renderSlots() {
 $("btnSaves").addEventListener("click", e => {
   e.stopPropagation();
   const p = $("savePanel");
-  $("exportPanel").classList.remove("show");
   p.classList.toggle("show");
   if (p.classList.contains("show")) { savesMsg(""); renderSlots(); }
 });
@@ -816,13 +815,7 @@ document.addEventListener("click", e => {
   if (p.classList.contains("show") && !p.contains(e.target)) p.classList.remove("show");
 });
 
-/* =========================================================
-   一覧の書き出し（A4横 / ブラウザの印刷 → PDFで保存）
-   P1        … 全体マップ（10カテゴリー × 10枠）
-   P2以降    … 登録のあるカテゴリーごとに 5列×2行
-   ========================================================= */
-const PRINT = { mapW: 340, cellW: 900 };
-
+/* 印刷用のプレビュー画像を作る */
 function shot(item, w) {
   const c = document.createElement("canvas");
   c.width = w;
@@ -830,430 +823,7 @@ function shot(item, w) {
   paint(c, item);
   return c.toDataURL("image/png");
 }
-
-function el(tag, cls, html) {
-  const n = document.createElement(tag);
-  if (cls) n.className = cls;
-  if (html != null) n.innerHTML = html;
-  return n;
-}
-
-function buildPrint() {
-  const root = $("printRoot");
-  root.innerHTML = "";
-
-  const filled = Object.values(S.items).filter(i => i.applied);
-  if (!filled.length) {
-    alert("登録済みの案がありません。詳細を開いて色や模様を指定し、「反映する」を押してください。");
-    return false;
-  }
-  const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
-
-  /* ---- P1 全体マップ ---- */
-  const p1 = el("div", "p-page");
-  const map = el("div", "p-map");
-  /* 1案も登録がないカテゴリーは出さない */
-  const cats = CATALOG.filter(c => c.items.some(ci => S.items[ci.id].applied));
-  /* 行数に応じてマスの大きさを決める（A4横・余白14mmに収める） */
-  const capH = 2.4, rowGap = 1.5, chrome = 12;      // mm
-  const availH = 182 - chrome;
-  let cellW = (availH - cats.length * capH - (cats.length - 1) * rowGap) / cats.length * RATIO_W / RATIO_H;
-  cellW = Math.min(cellW, 21.2);
-  map.style.gridTemplateColumns = `24mm repeat(${ITEMS_PER_CATEGORY}, ${cellW.toFixed(2)}mm)`;
-
-  map.appendChild(el("div"));
-  for (let i = 1; i <= ITEMS_PER_CATEGORY; i++) map.appendChild(el("div", "colno", String(i).padStart(2, "0")));
-  for (const cat of cats) {
-    const n = cat.items.filter(ci => S.items[ci.id].applied).length;
-    map.appendChild(el("div", "rowlbl",
-      `${catNameOf(cat.id)}<small>${n ? n + "案" : "－"}</small>`));
-    for (const ci of cat.items) {
-      const item = S.items[ci.id];
-      const cell = el("div", "mcell");
-      const th = el("div", "mthumb" + (item.applied ? "" : " empty"));
-      if (item.applied) {
-        const im = new Image(); im.src = shot(item, PRINT.mapW);
-        th.appendChild(im);
-      }
-      cell.appendChild(th);
-      cell.appendChild(el("div", "mcap", item.applied ? (item.name || "&nbsp;") : "&nbsp;"));
-      map.appendChild(cell);
-    }
-  }
-  p1.appendChild(map);
-  root.appendChild(p1);
-
-  /* ---- カテゴリーページ ---- */
-  for (const cat of CATALOG) {
-    const items = cat.items.map(ci => S.items[ci.id]).filter(i => i.applied);
-    if (!items.length) continue;
-
-    const pg = el("div", "p-page");
-    pg.appendChild(el("div", "p-head",
-      `<span class="t">${catNameOf(cat.id)}</span>
-       <span class="s">${items.length}案</span>
-       <span class="r">solarich 着せ替えシートシミュレーション　/　${today}</span>`));
-
-    const grid = el("div", "p-grid");
-    for (const item of items) {
-      const cell = el("div", "p-cell");
-      const main = el("div", "p-main");
-      const im = new Image(); im.src = shot(item, PRINT.cellW);
-      main.appendChild(im);
-      cell.appendChild(main);
-
-      const foot = el("div", "p-foot");
-      if (item.room) {
-        const r = new Image(); r.className = "p-room"; r.src = item.room.src;
-        foot.appendChild(r);
-      } else {
-        foot.appendChild(el("div", "p-room none"));
-      }
-      const label = item.mode === "pattern" && item.pattern
-        ? (item.patternName || "模様")
-        : item.hex.toUpperCase();
-      foot.appendChild(el("div", "p-txt",
-        `<div class="p-no">${String(item.no).padStart(2, "0")}</div>
-         <div class="p-name">${item.name || "（名称未設定）"}</div>
-         <div class="p-code">${label}</div>`));
-      cell.appendChild(foot);
-      grid.appendChild(cell);
-    }
-    pg.appendChild(grid);
-    root.appendChild(pg);
-  }
-  return true;
-}
-
-$("btnExpPdf").addEventListener("click", () => {
-  if (!S.base || !S.mask) { alert("画像の読み込みが終わっていません。"); return; }
-  let ok;
-  try { ok = buildPrint(); }
-  catch (e) {
-    alert("書き出しに失敗しました。静的サーバー経由（http://…）で開いてください。\n" + e.message);
-    return;
-  }
-  if (!ok) return;
-  $("exportPanel").classList.remove("show");
-  setTimeout(() => window.print(), 120);
-});
 window.addEventListener("afterprint", () => { $("printRoot").innerHTML = ""; });
-
-$("btnExport").addEventListener("click", e => {
-  e.stopPropagation();
-  $("savePanel").classList.remove("show");
-  $("exportPanel").classList.toggle("show");
-});
-document.addEventListener("click", e => {
-  const p = $("exportPanel");
-  if (p.classList.contains("show") && !p.contains(e.target)) p.classList.remove("show");
-});
-
-/* =========================================================
-   一覧の書き出し（PNG 1920×1080）
-   ページ構成はPDFと同じ。1ページ＝1枚のPNG
-   ========================================================= */
-const PNG = { W: 1920, H: 1080, PAD: 64 };
-
-function rr(g, x, y, w, h, r) {
-  r = Math.min(r, w / 2, h / 2);
-  g.beginPath();
-  g.moveTo(x + r, y);
-  g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r);
-  g.lineTo(x + w, y + h - r); g.arcTo(x + w, y + h, x + w - r, y + h, r);
-  g.lineTo(x + r, y + h); g.arcTo(x, y + h, x, y + h - r, r);
-  g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r);
-  g.closePath();
-}
-function hatch(g, x, y, w, h) {
-  g.save(); rr(g, x, y, w, h, 5); g.clip();
-  g.fillStyle = "#F7F6F4"; g.fillRect(x, y, w, h);
-  g.strokeStyle = "#EDEBE7"; g.lineWidth = 5;
-  for (let i = -h; i < w; i += 14) { g.beginPath(); g.moveTo(x + i, y + h); g.lineTo(x + i + h, y); g.stroke(); }
-  g.restore();
-}
-function clipText(g, text, max) {
-  if (g.measureText(text).width <= max) return text;
-  let t = text;
-  while (t.length > 1 && g.measureText(t + "…").width > max) t = t.slice(0, -1);
-  return t + "…";
-}
-function pngHeader(g, title, sub, right) {
-  const { PAD, W } = PNG;
-  g.textBaseline = "alphabetic"; g.textAlign = "left";
-  g.fillStyle = "#1F3A5F"; g.font = "900 32px 'Noto Sans JP', sans-serif";
-  g.fillText(title, PAD, PAD + 30);
-  const tw = g.measureText(title).width;
-  g.fillStyle = "#6E6B66"; g.font = "400 17px 'Noto Sans JP', sans-serif";
-  g.fillText(sub, PAD + tw + 18, PAD + 30);
-  g.fillStyle = "#9C9892"; g.textAlign = "right";
-  g.fillText(right, W - PAD, PAD + 30);
-  g.strokeStyle = "#1F3A5F"; g.lineWidth = 2;
-  g.beginPath(); g.moveTo(PAD, PAD + 46); g.lineTo(W - PAD, PAD + 46); g.stroke();
-  g.textAlign = "left";
-  return PAD + 46;
-}
-function newPage() {
-  const c = document.createElement("canvas");
-  c.width = PNG.W; c.height = PNG.H;
-  const g = c.getContext("2d");
-  g.fillStyle = "#fff"; g.fillRect(0, 0, PNG.W, PNG.H);
-  return { c, g };
-}
-
-function pngOverview() {
-  const { c, g } = newPage();
-  const { PAD, W, H } = PNG;
-
-  const labelW = 190, colGap = 26, rowGap = 10, capH = 22, numH = 24;
-  const cols = ITEMS_PER_CATEGORY;
-  /* 1案も登録がないカテゴリーは出さない */
-  const cats = CATALOG.filter(c => c.items.some(ci => S.items[ci.id].applied));
-  const rows = cats.length;
-  let thH = (H - PAD * 2 - numH - rows * capH - rowGap * (rows - 1)) / rows;
-  let thW = thH * RATIO_W / RATIO_H;
-  const maxW = (W - PAD * 2 - labelW - colGap * cols) / cols;
-  if (thW > maxW) { thW = maxW; thH = thW * RATIO_H / RATIO_W; }
-  const rowH = thH + capH;
-  const x0 = Math.max(PAD, (W - (labelW + cols * thW + colGap * cols)) / 2);
-  const y0 = PAD + Math.max(0, (H - PAD * 2 - numH - rows * rowH - rowGap * (rows - 1)) / 2);
-
-  g.font = "700 14px 'Noto Sans JP', sans-serif";
-  g.fillStyle = "#9C9892"; g.textAlign = "center";
-  for (let i = 0; i < cols; i++)
-    g.fillText(String(i + 1).padStart(2, "0"), x0 + labelW + colGap + i * (thW + colGap) + thW / 2, y0 + 16);
-  g.textAlign = "left";
-
-  cats.forEach((cat, r) => {
-    const y = y0 + numH + r * (rowH + rowGap);
-    const n = cat.items.filter(ci => S.items[ci.id].applied).length;
-    g.fillStyle = "#1F3A5F"; g.font = "700 16px 'Noto Sans JP', sans-serif";
-    g.fillText(clipText(g, catNameOf(cat.id), labelW - 16), x0, y + thH / 2 - 2);
-    g.fillStyle = "#9C9892"; g.font = "400 12px 'Noto Sans JP', sans-serif";
-    g.fillText(n ? n + "案" : "－", x0, y + thH / 2 + 15);
-
-    cat.items.forEach((ci, i) => {
-      const item = S.items[ci.id];
-      const x = x0 + labelW + colGap + i * (thW + colGap);
-      if (item.applied) {
-        const t = document.createElement("canvas");
-        t.width = Math.round(thW * 2); t.height = Math.round(thH * 2);
-        paint(t, item);
-        g.save(); rr(g, x, y, thW, thH, 4); g.clip();
-        g.drawImage(t, x, y, thW, thH); g.restore();
-      } else hatch(g, x, y, thW, thH);
-      g.strokeStyle = "#E2E0DC"; g.lineWidth = 1;
-      rr(g, x + .5, y + .5, thW - 1, thH - 1, 4); g.stroke();
-
-      if (item.applied && item.name) {
-        g.fillStyle = "#3A3A38"; g.font = "400 11px 'Noto Sans JP', sans-serif";
-        g.textAlign = "center";
-        g.fillText(clipText(g, item.name, thW), x + thW / 2, y + thH + 14);
-        g.textAlign = "left";
-      }
-    });
-  });
-  return c;
-}
-
-function pngCategory(cat, items, today) {
-  const { c, g } = newPage();
-  const { PAD, W, H } = PNG;
-  const top = pngHeader(g, catNameOf(cat.id), `${items.length}案`,
-    `solarich 着せ替えシートシミュレーション　/　${today}`) + 30;
-
-  const cols = 5, gap = 26, footH = 62;
-  const imgW = (W - PAD * 2 - gap * (cols - 1)) / cols;
-  const imgH = imgW * RATIO_H / RATIO_W;
-  const cellH = imgH + footH;
-  const rowsN = Math.ceil(items.length / cols);
-  const y0 = top + Math.max(0, (H - PAD - top - (rowsN * cellH + (rowsN - 1) * gap)) / 2);
-
-  items.forEach((item, i) => {
-    const x = PAD + (i % cols) * (imgW + gap);
-    const y = y0 + Math.floor(i / cols) * (cellH + gap);
-
-    g.save(); rr(g, x, y, imgW, cellH, 8); g.clip();
-    g.fillStyle = "#fff"; g.fillRect(x, y, imgW, cellH);
-    const t = document.createElement("canvas");
-    t.width = Math.round(imgW * 2); t.height = Math.round(imgH * 2);
-    paint(t, item);
-    g.drawImage(t, x, y, imgW, imgH);
-    g.restore();
-    g.strokeStyle = "#E2E0DC"; g.lineWidth = 1;
-    rr(g, x + .5, y + .5, imgW - 1, cellH - 1, 8); g.stroke();
-
-    const fy = y + imgH + 10, thW = 62, thH = 42;
-    if (item.room) {
-      g.save(); rr(g, x + 10, fy, thW, thH, 4); g.clip();
-      const s = Math.max(thW / item.room.naturalWidth, thH / item.room.naturalHeight);
-      g.drawImage(item.room, x + 10 + (thW - item.room.naturalWidth * s) / 2,
-        fy + (thH - item.room.naturalHeight * s) / 2,
-        item.room.naturalWidth * s, item.room.naturalHeight * s);
-      g.restore();
-    } else hatch(g, x + 10, fy, thW, thH);
-    g.strokeStyle = "#E2E0DC"; g.lineWidth = 1;
-    rr(g, x + 10.5, fy + .5, thW - 1, thH - 1, 4); g.stroke();
-
-    const tx = x + 10 + thW + 10, tmax = imgW - (thW + 30);
-    g.textAlign = "left";
-    g.fillStyle = "#1F3A5F"; g.font = "900 22px 'Noto Sans JP', sans-serif";
-    g.fillText(String(item.no).padStart(2, "0"), tx, fy + 18);
-    g.fillStyle = "#1E1E1C"; g.font = "700 14px 'Noto Sans JP', sans-serif";
-    g.fillText(clipText(g, item.name || "（名称未設定）", tmax), tx, fy + 34);
-    g.fillStyle = "#6E6B66"; g.font = "400 12px 'Noto Sans JP', sans-serif";
-    const label = item.mode === "pattern" && item.pattern ? (item.patternName || "模様") : item.hex.toUpperCase();
-    g.fillText(clipText(g, label, tmax), tx, fy + 50);
-  });
-  return c;
-}
-
-function downloadCanvas(canvas, name) {
-  return new Promise(res => canvas.toBlob(b => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(b);
-    a.download = name;
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); res(); }, 400);
-  }, "image/png"));
-}
-
-/* =========================================================
-   共有用HTML（1ファイル完結・画像を埋め込む）
-   ========================================================= */
-const esc = s => String(s).replace(/[&<>"']/g, c =>
-  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-function itemJpeg(item, w) {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = Math.round(w * (VIEW.y1 - VIEW.y0) / (VIEW.x1 - VIEW.x0));
-  paint(c, item);
-  return c.toDataURL("image/jpeg", 0.92);
-}
-function roomJpeg(img, maxW) {
-  const s = Math.min(1, maxW / img.naturalWidth);
-  const c = document.createElement("canvas");
-  c.width = Math.round(img.naturalWidth * s);
-  c.height = Math.round(img.naturalHeight * s);
-  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-  return c.toDataURL("image/jpeg", 0.85);
-}
-
-function buildShareHtml(title, today) {
-  const cats = CATALOG.filter(c => c.items.some(ci => S.items[ci.id].applied));
-  const total = Object.values(S.items).filter(i => i.applied).length;
-
-  let body = "";
-  for (const cat of cats) {
-    const items = cat.items.map(ci => S.items[ci.id]).filter(i => i.applied);
-    body += `<section><h2>${esc(catNameOf(cat.id))}<span>${items.length}案</span></h2><div class="g">`;
-    for (const it of items) {
-      const label = it.mode === "pattern" && it.pattern ? (it.patternName || "模様") : it.hex.toUpperCase();
-      body += `<figure>
-        <img class="b" src="${itemJpeg(it, 1000)}" alt="">
-        ${it.room ? `<img class="r" src="${roomJpeg(it.room, 900)}" alt="">` : ""}
-        <figcaption><b>${String(it.no).padStart(2, "0")}</b>
-          <span class="n">${esc(it.name || "（名称未設定）")}</span>
-          <span class="c">${esc(label)}</span></figcaption>
-      </figure>`;
-    }
-    body += `</div></section>`;
-  }
-
-  return `<!DOCTYPE html>
-<html lang="ja"><head><meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(title)}｜solarich 着せ替えシートシミュレーション</title>
-<style>
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Noto Sans JP','Hiragino Sans','Yu Gothic',sans-serif;background:#F4F4F2;color:#1E1E1C;line-height:1.7;-webkit-font-smoothing:antialiased}
-header{background:#fff;border-bottom:1px solid rgba(0,0,0,.08);padding:22px 24px}
-.hd{max-width:1280px;margin:0 auto;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-.hd h1{font-size:1.15rem;font-weight:900;color:#1F3A5F}
-.hd .s{font-size:.78rem;color:#6E6B66}
-.hd .d{margin-left:auto;font-size:.72rem;color:#9C9892}
-main{max-width:1280px;margin:0 auto;padding:8px 24px 72px}
-section{margin-top:40px}
-h2{font-size:1.05rem;font-weight:900;display:flex;align-items:baseline;gap:10px;margin-bottom:14px}
-h2 span{font-size:.72rem;font-weight:400;color:#9C9892}
-.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-figure{background:#fff;border:1px solid rgba(0,0,0,.05);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(30,30,28,.06)}
-figure img{width:100%;display:block}
-figure img.b{background:#FBFBFA}
-figure img.r{border-top:1px solid rgba(0,0,0,.06);aspect-ratio:16/9;object-fit:cover}
-figcaption{padding:11px 14px 13px;display:flex;align-items:baseline;gap:9px}
-figcaption b{font-size:.95rem;font-weight:900;color:#1F3A5F}
-figcaption .n{font-size:.84rem;font-weight:700;flex:1}
-figcaption .c{font-size:.66rem;color:#6E6B66}
-footer{text-align:center;font-size:.68rem;color:#9C9892;padding:0 20px 40px}
-@media print{body{background:#fff}figure{break-inside:avoid}}
-</style></head>
-<body>
-<header><div class="hd">
-  <h1>${esc(title)}</h1>
-  <span class="s">solarich 着せ替えシートシミュレーション　${cats.length}カテゴリー / ${total}案</span>
-  <span class="d">${esc(today)}</span>
-</div></header>
-<main>${body}</main>
-<footer>solarich 着せ替えシートシミュレーション｜このファイルは書き出し時点の内容です</footer>
-</body></html>`;
-}
-
-$("btnExpHtml").addEventListener("click", async () => {
-  if (!S.base || !S.mask) { alert("画像の読み込みが終わっていません。"); return; }
-  const filled = Object.values(S.items).filter(i => i.applied);
-  const msg = $("expMsg");
-  if (!filled.length) { msg.className = "saves-msg err"; msg.textContent = "登録済みの案がありません。"; return; }
-
-  const btn = $("btnExpHtml"); btn.disabled = true;
-  msg.className = "saves-msg"; msg.textContent = "書き出し中…";
-  try {
-    const data = S.currentSlot ? await DB.get(slotKey(S.currentSlot)) : null;
-    const title = (data && data.title) || "solarich 着せ替えシートシミュレーション";
-    const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
-    const html = buildShareHtml(title, today);
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${safeName(title)}_${new Date().toISOString().slice(0, 10)}.html`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    msg.className = "saves-msg ok";
-    msg.textContent = `書き出しました（${Math.round(blob.size / 1024)}KB）。そのまま送れます。`;
-  } catch (e) {
-    msg.className = "saves-msg err";
-    msg.textContent = "書き出せませんでした：" + e.message;
-  } finally { btn.disabled = false; }
-});
-
-$("btnExpPng").addEventListener("click", async () => {
-  if (!S.base || !S.mask) { alert("画像の読み込みが終わっていません。"); return; }
-  const filled = Object.values(S.items).filter(i => i.applied);
-  const msg = $("expMsg");
-  if (!filled.length) { msg.className = "saves-msg err"; msg.textContent = "登録済みの案がありません。"; return; }
-
-  const btn = $("btnExpPng"); btn.disabled = true;
-  msg.className = "saves-msg"; msg.textContent = "書き出し中…";
-  try {
-    if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const today = new Date().toLocaleDateString("ja-JP", { year: "numeric", month: "long", day: "numeric" });
-    const pages = [["01_全体マップ", pngOverview()]];
-    let n = 1;
-    for (const cat of CATALOG) {
-      const items = cat.items.map(ci => S.items[ci.id]).filter(i => i.applied);
-      if (!items.length) continue;
-      n++;
-      pages.push([`${String(n).padStart(2, "0")}_${safeName(catNameOf(cat.id))}`, pngCategory(cat, items, today)]);
-    }
-    for (const [name, cv] of pages) await downloadCanvas(cv, name + ".png");
-    msg.className = "saves-msg ok";
-    msg.textContent = `${pages.length}枚を書き出しました。`;
-  } catch (e) {
-    msg.className = "saves-msg err";
-    msg.textContent = "書き出せませんでした：" + e.message;
-  } finally { btn.disabled = false; }
-});
 
 /* ベース画像 */
 function setBase(img) {
@@ -1273,7 +843,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608282341";
+  img.src = "assets/base.png?v=202608282345";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -1288,7 +858,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608282341";
+  img.src = "assets/cutpass.svg?v=202608282345";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -1300,11 +870,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608282341";
+  img.src = "assets/shadow.png?v=202608282345";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608282341")
+fetch("assets/print.svg?v=202608282345")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
