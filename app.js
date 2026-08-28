@@ -43,6 +43,7 @@ for (const cat of CATALOG) {
       mode: "color",
       hex: "#EE7A20",
       pattern: null, patternName: "",
+      adj: { sat: 100, bright: 100, contrast: 100, cr: 0, mg: 0, yb: 0 },
       fit: "cover", scale: 100, offX: 0, offY: 0, rot: 0,
       print: "white", printColor: "#F3BE18",
       applied: false,
@@ -154,9 +155,58 @@ function paint(canvas, item) {
   }
 }
 
-function drawPattern(g, item, px, py, pw, ph) {
+/* ---------------------------------------------------------
+   模様の色調整
+   彩度・明るさ・コントラストは canvas のフィルタ、
+   カラーバランス（中間調）は1画素ずつ計算する。
+   結果はキャッシュして、カードを描くたびに作り直さないようにする
+   --------------------------------------------------------- */
+const ADJ_DEFAULT = { sat: 100, bright: 100, contrast: 100, cr: 0, mg: 0, yb: 0 };
+const adjKey = a => [a.sat, a.bright, a.contrast, a.cr, a.mg, a.yb].join(",");
+const isAdjDefault = a => adjKey(a) === adjKey(ADJ_DEFAULT);
+
+function adjustedPattern(item) {
+  if (!item.pattern) return null;
+  const a = item.adj || ADJ_DEFAULT;
+  if (isAdjDefault(a)) return item.pattern;
+
+  const key = adjKey(a);
+  if (item._adjCache && item._adjCache.key === key) return item._adjCache.canvas;
+
   const img = item.pattern;
-  const iw = img.naturalWidth, ih = img.naturalHeight;
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const c = document.createElement("canvas");
+  c.width = W; c.height = H;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.filter = `saturate(${a.sat}%) brightness(${a.bright}%) contrast(${a.contrast}%)`;
+  g.drawImage(img, 0, 0);
+  g.filter = "none";
+
+  if (a.cr || a.mg || a.yb) {
+    const im = g.getImageData(0, 0, W, H), d = im.data;
+    const kr = a.cr / 100 * 76, kg = a.mg / 100 * 76, kb = a.yb / 100 * 76;
+    const cl = v => v < 0 ? 0 : v > 255 ? 255 : v;
+    /* 中間調ほど強くかかる重み（0と255では効かない） */
+    const w = v => { const t = v / 127.5 - 1; return 1 - t * t; };
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], gg = d[i + 1], b = d[i + 2];
+      const L0 = 0.2126 * r + 0.7152 * gg + 0.0722 * b;
+      let nr = r + kr * w(r), ng = gg + kg * w(gg), nb = b + kb * w(b);
+      /* 輝度を保持（Photoshopの既定と同じ考え方） */
+      const L1 = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb;
+      if (L1 > 0.5) { const sc = L0 / L1; nr *= sc; ng *= sc; nb *= sc; }
+      d[i] = cl(nr); d[i + 1] = cl(ng); d[i + 2] = cl(nb);
+    }
+    g.putImageData(im, 0, 0);
+  }
+  item._adjCache = { key, canvas: c };
+  return c;
+}
+
+function drawPattern(g, item, px, py, pw, ph) {
+  const img = adjustedPattern(item);
+  if (!img) return;
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
   const sc = item.scale / 100;
   const ox = (item.offX / 100) * pw * 0.5;
   const oy = (item.offY / 100) * ph * 0.5;
@@ -345,6 +395,7 @@ function openDetail(id) {
   $("dOffX").value = it.offX;   $("vOffX").textContent = it.offX;
   $("dOffY").value = it.offY;   $("vOffY").textContent = it.offY;
   $("dRot").value = it.rot;     $("vRot").textContent = it.rot + "°";
+  syncAdj();
 
   setSeg("dPrint", "print", it.print);
   $("dPrintColorRow").style.display = it.print === "color" ? "" : "none";
@@ -564,6 +615,37 @@ $("dPrintHex").addEventListener("input", e => {
   if (/^#[0-9a-fA-F]{6}$/.test(h)) setPrintColor(h);
 });
 
+/* 模様の色調整 */
+const ADJ_UI = [
+  ["dSat", "sat", "vSat", v => v + "%"],
+  ["dBright", "bright", "vBright", v => v + "%"],
+  ["dContrast", "contrast", "vContrast", v => v + "%"],
+  ["dCr", "cr", "vCr", v => v],
+  ["dMg", "mg", "vMg", v => v],
+  ["dYb", "yb", "vYb", v => v]
+];
+function syncAdj() {
+  const it = cur(); if (!it) return;
+  if (!it.adj) it.adj = { ...ADJ_DEFAULT };
+  for (const [el, key, out, fmt] of ADJ_UI) {
+    $(el).value = it.adj[key];
+    $(out).textContent = fmt(it.adj[key]);
+  }
+}
+for (const [el, key, out, fmt] of ADJ_UI) {
+  $(el).addEventListener("input", e => {
+    const it = cur(); if (!it) return;
+    it.adj[key] = +e.target.value;
+    $(out).textContent = fmt(e.target.value);
+    repaintDetail(); refreshCard(it.id);
+  });
+}
+$("dAdjReset").addEventListener("click", () => {
+  const it = cur(); if (!it) return;
+  it.adj = { ...ADJ_DEFAULT };
+  syncAdj(); repaintDetail(); refreshCard(it.id);
+});
+
 $("dRoomPick").addEventListener("click", () => pickFile(setRoom));
 $("dRoomClear").addEventListener("click", () => {
   cur().room = null; cur().roomBlob = null; refreshRoom(); refreshCard(cur().id);
@@ -644,6 +726,7 @@ function snapshot(title) {
       id: it.id, name: it.name, mode: it.mode, hex: it.hex,
       fit: it.fit, scale: it.scale, offX: it.offX, offY: it.offY, rot: it.rot,
       print: it.print, printColor: it.printColor, applied: it.applied,
+      adj: { ...(it.adj || ADJ_DEFAULT) },
       patternKind: it.patternKind || (it.pattern ? "gen" : null),
       patternName: it.patternName || "",
       patternBlob: it.patternKind === "file" ? it.patternBlob : null,
@@ -660,7 +743,8 @@ async function restore(data) {
       name: "", mode: "color", hex: "#EE7A20",
       pattern: null, patternBlob: null, patternKind: null, patternName: "",
       fit: "cover", scale: 100, offX: 0, offY: 0, rot: 0,
-      print: "white", printColor: "#F3BE18", applied: false, room: null, roomBlob: null
+      print: "white", printColor: "#F3BE18", applied: false, room: null, roomBlob: null,
+      adj: { ...ADJ_DEFAULT }, _adjCache: null
     });
   }
   S.catNames = { ...data.catNames };
@@ -672,6 +756,7 @@ async function restore(data) {
       name: s.name, mode: s.mode, hex: s.hex,
       fit: s.fit, scale: s.scale, offX: s.offX, offY: s.offY, rot: s.rot,
       print: s.print, printColor: s.printColor, applied: s.applied,
+      adj: { ...ADJ_DEFAULT, ...(s.adj || {}) }, _adjCache: null,
       patternKind: s.patternKind, patternName: s.patternName
     });
     if (s.patternBlob) {
@@ -835,7 +920,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608290021";
+  img.src = "assets/base.png?v=202608290037";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -850,7 +935,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608290021";
+  img.src = "assets/cutpass.svg?v=202608290037";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -862,11 +947,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608290021";
+  img.src = "assets/shadow.png?v=202608290037";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608290021")
+fetch("assets/print.svg?v=202608290037")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;

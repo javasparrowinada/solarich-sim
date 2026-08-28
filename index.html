@@ -165,6 +165,11 @@ input[type=range]{width:100%;accent-color:var(--navy)}
 .hint{font-size:.66rem;color:var(--ink-faint);margin-top:8px;line-height:1.6}
 .footer{text-align:center;font-size:.7rem;color:var(--ink-faint);padding:8px 20px 48px}
 
+/* ---------- 模様の色調整 ---------- */
+.adj{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.adj-head{display:flex;align-items:center;justify-content:space-between;font-size:.7rem;font-weight:900;letter-spacing:.05em;color:var(--navy);margin-bottom:4px}
+.adj-sub{font-size:.66rem;font-weight:700;color:var(--ink-light);margin-top:14px}
+
 /* ================= 書き出し（A4横 PDF） ================= */
 #printRoot{display:none}
 @media print{
@@ -310,6 +315,18 @@ input[type=range]{width:100%;accent-color:var(--navy)}
             <div class="field"><div class="field-label">横位置 <span class="val" id="vOffX">0</span></div><input type="range" id="dOffX" min="-100" max="100" value="0"></div>
             <div class="field"><div class="field-label">縦位置 <span class="val" id="vOffY">0</span></div><input type="range" id="dOffY" min="-100" max="100" value="0"></div>
             <div class="field"><div class="field-label">回転 <span class="val" id="vRot">0°</span></div><input type="range" id="dRot" min="-180" max="180" value="0"></div>
+
+            <div class="adj">
+              <div class="adj-head">色の調整<button class="btn btn-sm btn-ghost" id="dAdjReset">リセット</button></div>
+              <div class="field"><div class="field-label">彩度 <span class="val" id="vSat">100%</span></div><input type="range" id="dSat" min="0" max="200" value="100"></div>
+              <div class="field"><div class="field-label">明るさ <span class="val" id="vBright">100%</span></div><input type="range" id="dBright" min="40" max="180" value="100"></div>
+              <div class="field"><div class="field-label">コントラスト <span class="val" id="vContrast">100%</span></div><input type="range" id="dContrast" min="40" max="180" value="100"></div>
+              <div class="adj-sub">カラーバランス（中間調）</div>
+              <div class="field"><div class="field-label"><span>シアン ⇔ レッド</span><span class="val" id="vCr">0</span></div><input type="range" id="dCr" min="-100" max="100" value="0"></div>
+              <div class="field"><div class="field-label"><span>マゼンタ ⇔ グリーン</span><span class="val" id="vMg">0</span></div><input type="range" id="dMg" min="-100" max="100" value="0"></div>
+              <div class="field"><div class="field-label"><span>イエロー ⇔ ブルー</span><span class="val" id="vYb">0</span></div><input type="range" id="dYb" min="-100" max="100" value="0"></div>
+              <div class="hint">輝度は保持されます（Photoshopの既定と同じ考え方）。元の画像は変わりません。</div>
+            </div>
           </div>
         </div>
 
@@ -332,7 +349,7 @@ input[type=range]{width:100%;accent-color:var(--navy)}
   </div>
 </div>
 
-<script src="catalog.js?v=202608290021"></script>
-<script src="app.js?v=202608290021"></script>
+<script src="catalog.js?v=202608290037"></script>
+<script src="app.js?v=202608290037"></script>
 </body>
 </html>
