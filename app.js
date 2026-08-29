@@ -581,7 +581,7 @@ $("dPatSave").addEventListener("click", () => {
   const d = new Date(), pad = n => String(n).padStart(2, "0");
   const stamp = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
   const base = safeName((it.patternName || "柄").replace(/\.[^.]+$/, ""));
-  const tag = isAdjDefault(it.adj || ADJ_DEFAULT) ? "" : "_調整済み";
+  const tag = isAdjDefault(it.adj || ADJ_DEFAULT) ? "" : "_edit";
   c.toBlob(blob => {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -741,7 +741,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608290134";
+  img.src = "assets/base.png?v=202608291922";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -756,7 +756,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608290134";
+  img.src = "assets/cutpass.svg?v=202608291922";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -768,11 +768,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608290134";
+  img.src = "assets/shadow.png?v=202608291922";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608290134")
+fetch("assets/print.svg?v=202608291922")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
