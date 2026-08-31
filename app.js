@@ -13,6 +13,18 @@
 const MASK  = { x: 0.118921, y: 0.062448, w: 0.765855, h: 0.541460 };
 const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
 
+/* =========================================================
+   印刷用PDFの補正値
+   紙に刷ると沈むぶんを、あらかじめ持ち上げておくための値。
+   画面用のPDFには一切かからない。ここだけ直せば効き方を変えられる
+   ========================================================= */
+const PRINT_ADJUST = {
+  base:  { brightness: 112, saturate: 104 },   // solarich 本体
+  sheet: { brightness: 108, saturate: 122 }    // シートの色・模様
+};
+const printFilter = k =>
+  `brightness(${PRINT_ADJUST[k].brightness}%) saturate(${PRINT_ADJUST[k].saturate}%)`;
+
 /* 表示範囲の縦横比（マス目やサムネイルの形に使う） */
 const RATIO_W = 1527, RATIO_H = 1000;
 
@@ -69,7 +81,7 @@ function mapper(cw, ch) {
 
 /* 色／模様を抜き型で切り抜いた1枚を作る（使い回しの裏キャンバス） */
 const _layer = document.createElement("canvas");
-function makeLayer(cw, ch, item) {
+function makeLayer(cw, ch, item, forPrint) {
   if (!S.mask) return null;
   _layer.width = cw; _layer.height = ch;
   const g = _layer.getContext("2d");
@@ -78,12 +90,14 @@ function makeLayer(cw, ch, item) {
   const m = mapper(cw, ch);
   const px = m.x(SHEET.x), py = m.y(SHEET.y), pw = m.w(SHEET.w), ph = m.h(SHEET.h);
 
+  if (forPrint) g.filter = printFilter("sheet");
   if (item.mode === "pattern" && item.pattern) {
     drawPattern(g, item, px, py, pw, ph);
   } else {
     g.fillStyle = item.hex;
     g.fillRect(px, py, pw, ph);
   }
+  g.filter = "none";
 
   /* 出っ張りの落ち影（assets/shadow.png があれば重ねる）
      抜き型（cutpass.svg）と同じアートボードで書き出した透過PNG。
@@ -130,19 +144,21 @@ function printColorOf(item) {
 }
 
 /* キャンバス1枚を描く。item.applied が false ならベース画像のまま */
-function paint(canvas, item) {
+function paint(canvas, item, forPrint) {
   const g = canvas.getContext("2d");
   const cw = canvas.width, ch = canvas.height;
   g.clearRect(0, 0, cw, ch);
   if (!S.base) return;
 
   const BW = S.base.naturalWidth;
+  if (forPrint) g.filter = printFilter("base");
   g.drawImage(S.base,
     VIEW.x0 * BW, VIEW.y0 * BW, (VIEW.x1 - VIEW.x0) * BW, (VIEW.y1 - VIEW.y0) * BW,
     0, 0, cw, ch);
+  g.filter = "none";
 
   if (item && item.applied) {
-    const layer = makeLayer(cw, ch, item);
+    const layer = makeLayer(cw, ch, item, forPrint);
     if (layer) g.drawImage(layer, 0, 0);
 
     const pc = printColorOf(item);
@@ -693,7 +709,7 @@ function pdfName(it) {
   return parts.join("_");
 }
 
-$("dPdf").addEventListener("click", () => {
+function makePdf(forPrint) {
   const it = cur(); if (!it) return;
   if (!S.base || !S.mask) { alert("画像の読み込みが終わっていません。"); return; }
 
@@ -702,20 +718,22 @@ $("dPdf").addEventListener("click", () => {
   root.innerHTML = "";
   const pg = document.createElement("div");
   pg.className = "p-page";
-  pg.innerHTML = `<div class="p-one"><img src="${shot(it, 2400)}" alt="">
+  pg.innerHTML = `<div class="p-one"><img src="${shot(it, 2400, forPrint)}" alt="">
     <div class="code">${label}</div></div>`;
   root.appendChild(pg);
 
-  document.title = pdfName(it);
+  document.title = pdfName(it) + (forPrint ? "_print" : "");
   setTimeout(() => window.print(), 150);
-});
+}
+$("dPdf").addEventListener("click", () => makePdf(false));
+$("dPdfPrint").addEventListener("click", () => makePdf(true));
 
 /* 印刷用のプレビュー画像を作る */
-function shot(item, w) {
+function shot(item, w, forPrint) {
   const c = document.createElement("canvas");
   c.width = w;
   c.height = Math.round(w * (VIEW.y1 - VIEW.y0) / (VIEW.x1 - VIEW.x0));
-  paint(c, item);
+  paint(c, item, forPrint);
   return c.toDataURL("image/png");
 }
 window.addEventListener("afterprint", () => {
@@ -741,7 +759,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608291922";
+  img.src = "assets/base.png?v=202608311600";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -756,7 +774,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608291922";
+  img.src = "assets/cutpass.svg?v=202608311600";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -768,11 +786,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608291922";
+  img.src = "assets/shadow.png?v=202608311600";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608291922")
+fetch("assets/print.svg?v=202608311600")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
