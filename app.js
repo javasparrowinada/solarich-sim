@@ -27,8 +27,39 @@ const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
 const PRINT_ADJUST = {
   //                黒レベル  白点    ガンマ   彩度
   base:  { black: 52, white: 0.985, gamma: 1.95, saturate: 110 },  // solarich 本体
-  sheet: { black: 44, white: 0.985, gamma: 1.75, saturate: 150 }   // シートの色・模様
+  sheet: { black: 44, white: 0.985, gamma: 1.75, saturate: 150 },  // 模様（画像）
+  /* 単色は別扱い。暗部が存在しないのでトーンカーブをかけると色みがずれる。
+     色相はそのままに、明度と彩度だけを動かす
+       lighten  明度に足す量（%）。0でそのまま
+       saturate 彩度の倍率（%）。100でそのまま                        */
+  color: { lighten: 0, saturate: 106 }
 };
+
+/* 単色の印刷用の色を作る（色相は変えない） */
+function printColorHex(hex) {
+  const p = PRINT_ADJUST.color;
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let h = 0;
+  if (d) {
+    if (mx === r) h = ((g - b) / d) % 6;
+    else if (mx === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+  }
+  let l = (mx + mn) / 2;
+  let sa = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  sa = Math.min(1, sa * p.saturate / 100);
+  l = Math.min(1, Math.max(0, l + p.lighten / 100));
+  const c = (1 - Math.abs(2 * l - 1)) * sa, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+  let rr, gg, bb;
+  if (h < 60) [rr, gg, bb] = [c, x, 0]; else if (h < 120) [rr, gg, bb] = [x, c, 0];
+  else if (h < 180) [rr, gg, bb] = [0, c, x]; else if (h < 240) [rr, gg, bb] = [0, x, c];
+  else if (h < 300) [rr, gg, bb] = [x, 0, c]; else [rr, gg, bb] = [c, 0, x];
+  const to = v => Math.round(Math.min(255, Math.max(0, (v + m) * 255))).toString(16).padStart(2, "0");
+  return "#" + to(rr) + to(gg) + to(bb);
+}
 
 /* トーンカーブと彩度をまとめて適用する
      black    出力の下限。真っ暗な部分をここまで持ち上げる（ガンマでは動かせない）
@@ -37,26 +68,64 @@ const PRINT_ADJUST = {
      saturate 100 でそのまま                                        */
 function applyPrintCurve(g, w, h, p) {
   const im = g.getImageData(0, 0, w, h), d = im.data;
-  const lut = new Uint8Array(256), inv = 1 / p.gamma;
+  const lut = new Float32Array(256), inv = 1 / p.gamma;
   for (let i = 0; i < 256; i++) {
     let v = (i / 255) / p.white;
     if (v > 1) v = 1;
-    lut[i] = Math.round(p.black + (255 - p.black) * Math.pow(v, inv));
+    lut[i] = p.black + (255 - p.black) * Math.pow(v, inv);
   }
   const sat = p.saturate / 100;
   const cl = v => v < 0 ? 0 : v > 255 ? 255 : v;
+
   for (let i = 0; i < d.length; i += 4) {
     if (d[i + 3] === 0) continue;
-    let r = lut[d[i]], gg = lut[d[i + 1]], b = lut[d[i + 2]];
-    if (sat !== 1) {
-      const L = 0.2126 * r + 0.7152 * gg + 0.0722 * b;
-      r = L + (r - L) * sat; gg = L + (gg - L) * sat; b = L + (b - L) * sat;
+    const r = d[i], g1 = d[i + 1], b = d[i + 2];
+    const mx = r > g1 ? (r > b ? r : b) : (g1 > b ? g1 : b);
+    let nr, ng, nb;
+
+    if (mx < 0.5) {                       /* 真っ黒は黒レベルまで持ち上げる */
+      nr = ng = nb = lut[0];
+    } else {
+      const L = 0.2126 * r + 0.7152 * g1 + 0.0722 * b;
+      const L2 = lut[Math.round(L)];
+      const k = L2 / L, kmax = 255 / mx;
+      if (k <= kmax) {
+        /* そのまま拡大できる。RGBの比が変わらないので色相も変わらない */
+        nr = r * k; ng = g1 * k; nb = b * k;
+      } else {
+        /* 255で頭打ち。足りない明るさは「白に寄せる」ことで補う。
+           白へ寄せる方向は色相を変えない（淡くなるだけ） */
+        nr = r * kmax; ng = g1 * kmax; nb = b * kmax;
+        const Lp = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb;
+        let w2 = (255 - Lp) > 0.5 ? (L2 - Lp) / (255 - Lp) : 0;
+        w2 = w2 < 0 ? 0 : w2 > 1 ? 1 : w2;
+        nr += (255 - nr) * w2; ng += (255 - ng) * w2; nb += (255 - nb) * w2;
+      }
     }
-    d[i] = cl(r); d[i + 1] = cl(gg); d[i + 2] = cl(b);
+
+    if (sat !== 1) {
+      /* 彩度は無彩色を軸に広げる。はみ出す手前で止めるので色相は動かない */
+      const Lc = 0.2126 * nr + 0.7152 * ng + 0.0722 * nb;
+      const lim = v => v > Lc ? (255 - Lc) / (v - Lc) : (v < Lc ? Lc / (Lc - v) : Infinity);
+      let f = Math.min(sat, lim(nr), lim(ng), lim(nb));
+      if (f < 1) f = 1;
+      nr = Lc + (nr - Lc) * f; ng = Lc + (ng - Lc) * f; nb = Lc + (nb - Lc) * f;
+    }
+    d[i] = cl(nr); d[i + 1] = cl(ng); d[i + 2] = cl(nb);
   }
   g.putImageData(im, 0, 0);
 }
 
+/* トーンカーブと彩度をまとめて適用する
+     black    出力の下限。真っ暗な部分をここまで持ち上げる（ガンマでは動かせない）
+     white    この入力レベルで白になる。1.0未満にすると明るい側が伸びる
+     gamma    大きいほど中間調が持ち上がる
+     saturate 100 でそのまま                                        */
+/* トーンカーブと彩度をまとめて適用する
+     black    出力の下限。真っ暗な部分をここまで持ち上げる（ガンマでは動かせない）
+     white    この入力レベルで白になる。1.0未満にすると明るい側が伸びる
+     gamma    大きいほど中間調が持ち上がる
+     saturate 100 でそのまま                                        */
 /* 表示範囲の縦横比（マス目やサムネイルの形に使う） */
 const RATIO_W = 1527, RATIO_H = 1000;
 
@@ -124,11 +193,11 @@ function makeLayer(cw, ch, item, forPrint) {
 
   if (item.mode === "pattern" && item.pattern) {
     drawPattern(g, item, px, py, pw, ph);
+    if (forPrint) applyPrintCurve(g, cw, ch, PRINT_ADJUST.sheet);
   } else {
-    g.fillStyle = item.hex;
+    g.fillStyle = forPrint ? printColorHex(item.hex) : item.hex;
     g.fillRect(px, py, pw, ph);
   }
-  if (forPrint) applyPrintCurve(g, cw, ch, PRINT_ADJUST.sheet);
 
   /* 出っ張りの落ち影（assets/shadow.png があれば重ねる）
      抜き型（cutpass.svg）と同じアートボードで書き出した透過PNG。
@@ -789,7 +858,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608311647";
+  img.src = "assets/base.png?v=20260831170452";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -804,7 +873,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608311647";
+  img.src = "assets/cutpass.svg?v=20260831170452";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -816,11 +885,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608311647";
+  img.src = "assets/shadow.png?v=20260831170452";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608311647")
+fetch("assets/print.svg?v=20260831170452")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
