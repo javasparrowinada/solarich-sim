@@ -15,15 +15,38 @@ const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
 
 /* =========================================================
    印刷用PDFの補正値
-   紙に刷ると沈むぶんを、あらかじめ持ち上げておくための値。
-   画面用のPDFには一切かからない。ここだけ直せば効き方を変えられる
+   ---------------------------------------------------------
+   掛け算（brightness）で持ち上げると、明るい所が振り切れて白飛びし、
+   暗い所はほとんど上がらない。そこでトーンカーブ（ガンマ）を使う。
+   白は白のまま、暗部と中間調だけが持ち上がる。
+
+     gamma    1.0 = そのまま。大きいほど暗部が持ち上がる
+     saturate 100 = そのまま。大きいほど鮮やか
+   ここだけ直せば効き方を変えられる。画面表示には影響しない
    ========================================================= */
 const PRINT_ADJUST = {
-  base:  { brightness: 112, saturate: 104 },   // solarich 本体
-  sheet: { brightness: 108, saturate: 122 }    // シートの色・模様
+  base:  { gamma: 1.30, saturate: 104 },   // solarich 本体
+  sheet: { gamma: 1.18, saturate: 128 }    // シートの色・模様
 };
-const printFilter = k =>
-  `brightness(${PRINT_ADJUST[k].brightness}%) saturate(${PRINT_ADJUST[k].saturate}%)`;
+
+/* トーンカーブと彩度をまとめて適用する */
+function applyPrintCurve(g, w, h, p) {
+  const im = g.getImageData(0, 0, w, h), d = im.data;
+  const lut = new Uint8Array(256), inv = 1 / p.gamma;
+  for (let i = 0; i < 256; i++) lut[i] = Math.round(255 * Math.pow(i / 255, inv));
+  const sat = p.saturate / 100;
+  const cl = v => v < 0 ? 0 : v > 255 ? 255 : v;
+  for (let i = 0; i < d.length; i += 4) {
+    if (d[i + 3] === 0) continue;
+    let r = lut[d[i]], gg = lut[d[i + 1]], b = lut[d[i + 2]];
+    if (sat !== 1) {
+      const L = 0.2126 * r + 0.7152 * gg + 0.0722 * b;
+      r = L + (r - L) * sat; gg = L + (gg - L) * sat; b = L + (b - L) * sat;
+    }
+    d[i] = cl(r); d[i + 1] = cl(gg); d[i + 2] = cl(b);
+  }
+  g.putImageData(im, 0, 0);
+}
 
 /* 表示範囲の縦横比（マス目やサムネイルの形に使う） */
 const RATIO_W = 1527, RATIO_H = 1000;
@@ -90,14 +113,13 @@ function makeLayer(cw, ch, item, forPrint) {
   const m = mapper(cw, ch);
   const px = m.x(SHEET.x), py = m.y(SHEET.y), pw = m.w(SHEET.w), ph = m.h(SHEET.h);
 
-  if (forPrint) g.filter = printFilter("sheet");
   if (item.mode === "pattern" && item.pattern) {
     drawPattern(g, item, px, py, pw, ph);
   } else {
     g.fillStyle = item.hex;
     g.fillRect(px, py, pw, ph);
   }
-  g.filter = "none";
+  if (forPrint) applyPrintCurve(g, cw, ch, PRINT_ADJUST.sheet);
 
   /* 出っ張りの落ち影（assets/shadow.png があれば重ねる）
      抜き型（cutpass.svg）と同じアートボードで書き出した透過PNG。
@@ -151,11 +173,10 @@ function paint(canvas, item, forPrint) {
   if (!S.base) return;
 
   const BW = S.base.naturalWidth;
-  if (forPrint) g.filter = printFilter("base");
   g.drawImage(S.base,
     VIEW.x0 * BW, VIEW.y0 * BW, (VIEW.x1 - VIEW.x0) * BW, (VIEW.y1 - VIEW.y0) * BW,
     0, 0, cw, ch);
-  g.filter = "none";
+  if (forPrint) applyPrintCurve(g, cw, ch, PRINT_ADJUST.base);
 
   if (item && item.applied) {
     const layer = makeLayer(cw, ch, item, forPrint);
@@ -759,7 +780,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608311600";
+  img.src = "assets/base.png?v=202608311615";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -774,7 +795,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608311600";
+  img.src = "assets/cutpass.svg?v=202608311615";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -786,11 +807,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608311600";
+  img.src = "assets/shadow.png?v=202608311615";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608311600")
+fetch("assets/print.svg?v=202608311615")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
