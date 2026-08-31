@@ -25,15 +25,24 @@ const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
    ここだけ直せば効き方を変えられる。画面表示には影響しない
    ========================================================= */
 const PRINT_ADJUST = {
-  base:  { gamma: 1.60, saturate: 104 },   // solarich 本体
-  sheet: { gamma: 1.40, saturate: 128 }    // シートの色・模様
+  //                黒レベル  白点    ガンマ   彩度
+  base:  { black: 28, white: 0.97, gamma: 1.70, saturate: 104 },  // solarich 本体
+  sheet: { black: 22, white: 0.98, gamma: 1.50, saturate: 128 }   // シートの色・模様
 };
 
-/* トーンカーブと彩度をまとめて適用する */
+/* トーンカーブと彩度をまとめて適用する
+     black    出力の下限。真っ暗な部分をここまで持ち上げる（ガンマでは動かせない）
+     white    この入力レベルで白になる。1.0未満にすると明るい側が伸びる
+     gamma    大きいほど中間調が持ち上がる
+     saturate 100 でそのまま                                        */
 function applyPrintCurve(g, w, h, p) {
   const im = g.getImageData(0, 0, w, h), d = im.data;
   const lut = new Uint8Array(256), inv = 1 / p.gamma;
-  for (let i = 0; i < 256; i++) lut[i] = Math.round(255 * Math.pow(i / 255, inv));
+  for (let i = 0; i < 256; i++) {
+    let v = (i / 255) / p.white;
+    if (v > 1) v = 1;
+    lut[i] = Math.round(p.black + (255 - p.black) * Math.pow(v, inv));
+  }
   const sat = p.saturate / 100;
   const cl = v => v < 0 ? 0 : v > 255 ? 255 : v;
   for (let i = 0; i < d.length; i += 4) {
@@ -780,7 +789,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608311621";
+  img.src = "assets/base.png?v=202608311628";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -795,7 +804,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608311621";
+  img.src = "assets/cutpass.svg?v=202608311628";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -807,11 +816,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608311621";
+  img.src = "assets/shadow.png?v=202608311628";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608311621")
+fetch("assets/print.svg?v=202608311628")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
