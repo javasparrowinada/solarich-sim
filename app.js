@@ -858,7 +858,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=20260831170452";
+  img.src = "assets/base.png?v=20260831172154";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -873,7 +873,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=20260831170452";
+  img.src = "assets/cutpass.svg?v=20260831172154";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -885,11 +885,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=20260831170452";
+  img.src = "assets/shadow.png?v=20260831172154";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=20260831170452")
+fetch("assets/print.svg?v=20260831172154")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
