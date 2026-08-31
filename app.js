@@ -26,8 +26,8 @@ const SHEET = { x: 0.219440, y: 0.171966, w: 0.565201, h: 0.322999 };
    ========================================================= */
 const PRINT_ADJUST = {
   //                黒レベル  白点    ガンマ   彩度
-  base:  { black: 28, white: 0.97, gamma: 1.70, saturate: 104 },  // solarich 本体
-  sheet: { black: 22, white: 0.98, gamma: 1.50, saturate: 128 }   // シートの色・模様
+  base:  { black: 52, white: 0.96, gamma: 1.95, saturate: 104 },  // solarich 本体
+  sheet: { black: 44, white: 0.96, gamma: 1.75, saturate: 128 }   // シートの色・模様
 };
 
 /* トーンカーブと彩度をまとめて適用する
@@ -789,7 +789,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "ベース画像 未設定";
     $("baseMsg").textContent = "assets/base.png が読み込めませんでした。右のボタンから選択してください。";
   };
-  img.src = "assets/base.png?v=202608311628";
+  img.src = "assets/base.png?v=202608311636";
 })();
 
 /* 抜き型（cutpass.svg） */
@@ -804,7 +804,7 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     $("baseLbl").textContent = "抜き型データが読めません";
     $("baseMsg").textContent = "assets/cutpass.svg が見つかりません。";
   };
-  img.src = "assets/cutpass.svg?v=202608311628";
+  img.src = "assets/cutpass.svg?v=202608311636";
 })();
 
 /* 出っ張りの落ち影（assets/shadow.png / 任意） */
@@ -816,11 +816,11 @@ $("btnBase").addEventListener("click", () => pickFile(async f => setBase(await l
     if (S.current) repaintDetail();
   };
   img.onerror = () => {};      /* 無ければ影なしで動く */
-  img.src = "assets/shadow.png?v=202608311628";
+  img.src = "assets/shadow.png?v=202608311636";
 })();
 
 /* 印字レイヤー（assets/print.svg） */
-fetch("assets/print.svg?v=202608311628")
+fetch("assets/print.svg?v=202608311636")
   .then(r => r.ok ? r.text() : Promise.reject(new Error(r.status)))
   .then(t => {
     S.printSrc = t;
